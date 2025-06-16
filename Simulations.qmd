@@ -8,46 +8,7 @@ editor: visual
 
 Write a simulation of a basic two arm clinical trial, where the participant outcomes are all normally distributed with the same variance but with a different mean in each of the two arms. Then use this simulation to estimate the power of this clinical trial.
 
-```{r}
-# setting arbitrary values for the arm means, sample size (100 per arm), and common variance = 1
-mu_0 <- 2
-mu_1 <- 3
-sigma <- 1
-n = 100
-
-# control arm outcomes
-y_0 <- rnorm(n = 100, mean = mu_0, sd = sigma)
-y_1 <- rnorm(n = 100, mean = mu_1, sd = sigma)
-
-# get sample means
-ybar_0 <- mean(y_0)
-ybar_1 <- mean(y_1)
-
-```
-
 Get the treatment effect $\hat{\delta} = \overline{y}_1 - \overline{y}_0$, then the Z-test statistic $Z = \frac{\hat{\delta} - \delta}{\sqrt{2\sigma^2/n}} = \frac{\hat{\delta} - \delta}{se(\hat{\delta})}$ where $Z \sim N(0,1)$
-
-```{r}
-# sample mean difference (ie treatment effect for this sample)
-deltahat <- ybar_1 - ybar_0
-
-# get Z-test statistic
-Z <- (deltahat)/sqrt((2*sigma^2)/n)
-
-# compare to standard Normal quantile
-Z > qnorm(1 - 0.05/2)
-```
-
-So we reject the null hypothesis of no significant difference in means.
-
-The power of the trial can be found manually or using power.t.test:
-
-```{r}
-# Power
-1 - pnorm( qnorm(1 - 0.05/2) - 1/sqrt((2*sigma^2)/100) )
-
-power.t.test(n = 100, delta = 1, sd = 1)
-```
 
 ### Data simulation function
 
@@ -70,24 +31,9 @@ data_sim <- function(mu0, mu1, sd, n){
 }
 ```
 
-Repeatedly simulate the data and store the treatment effect for each replicate in the vector 'deltas'. Then find the standard error
-
-```{r}
-nrep <- 10000
-deltas <- replicate(nrep, data_sim(2,2.01,0.11,100))
-se <- sqrt(2 * 0.11^2 / 100)
-```
-
-Find the power of the simulated trial, i.e. the probability of rejecting the null, by getting Z-statistics for all simulated deltas and then calculating what proportion of these are significant.
-
-```{r}
-z_scores <- deltas / se
-mean(abs(z_scores) > qnorm(1 - 0.05 / 2))
-```
-
 ### Power calculation function
 
-Write it into another function
+Write a power calculation function that repeatedly simulates the data and stores the treatment effect for each replicate in the vector 'deltas'. Then find the standard error and find the power of the simulated trial, i.e. the probability of rejecting the null, by getting Z-statistics for all simulated deltas and then calculating what proportion of these are significant.
 
 ```{r}
 power_sim <- function(mu0, mu1, sd, n, nrep = 10000){
@@ -116,18 +62,7 @@ power_sim(mu0 = 2, mu1 = 2.1, sd = 0.1, n = 20)
 
 ## Plots
 
-Plot trial power against different standard deviations
-
-```{r}
-sd_vals <- seq(0,1, by = 0.1)
-power_sd <- numeric(length = length(sd_vals))
-for (i in 1:length(sd_vals)) {
-  power_sd[i] <- power_sim(mu0 = 2, mu1 = 2.05, sd = sd_vals[i], n = 50)
-}
-
-plot(sd_vals, power_sd, type = 'l', lwd = '2', 
-     xlab = 'Standard deviation', ylab = 'Power', main = 'Power against standard deviation')
-```
+### Trial power against different standard deviations
 
 ```{r}
 sd_vals <- seq(0,1, by = 0.1)
@@ -147,23 +82,47 @@ plot(sd_vals, power_sd[,1], type = 'l', lwd = 2,
      xlab = 'Standard deviation', ylab = 'Power', main = 'Power against standard deviation')
 lines(sd_vals, power_sd[,2], lwd = 2, col = 'blue')
 lines(sd_vals, power_sd[,3], lwd = 2, col = 'darkgreen')
+abline(h = 0.8, lty = 2)
+
 legend('topright', c('n = 50', 'n = 10', 'n = 100'), col = c('black', 'blue', 'darkgreen'), lwd = 2, title = 'sample size per arm')
 ```
 
-Trial power against sample size
+### Trial power against sample size
 
 ```{r}
 n_vals <- seq(10,100, by = 5)
+delta_vals <- c(0.01, 0.2, 0.5)
 power_n <- numeric(length = length(n_vals))
+
 for (i in 1:length(n_vals)) {
   power_n[i] <- power_sim(mu0 = 2, mu1 = 2.2, sd = 0.3, n = n_vals[i])
 }
 
 plot(n_vals, power_n, type = 'l',
-     xlab = 'Sample size per arm', ylab = 'Power', main = 'Power against per-arm sample size')
+     xlab = 'Sample size per arm', ylab = 'Power', main = 'Power against per-arm sample size',
+     sub = 'Treatment effect size = 0.2')
+abline(h = 0.8, lty =2)
+```
+```{r}
+n_vals <- seq(10,100, by = 5)
+delta_vals <- c(0.01, 0.2, 0.5)
+
+power_n <- matrix(nrow = length(delta_vals), ncol = length(n_vals))
+
+for(j in 1:length(delta_vals)){
+  delta = delta_vals[j]
+  for (i in 1:length(n_vals)) {
+    power_n[i, j] <- power_sim(mu0 = 2, mu1 = 2 + delta, sd = 0.3, n = n_vals[i])
+  }
+}
+
+plot(n_vals, power_n, type = 'l',
+     xlab = 'Sample size per arm', ylab = 'Power', main = 'Power against per-arm sample size',
+     sub = 'Treatment effect size = 0.2')
+abline(h = 0.8, lty =2)
 ```
 
-Trial power against true treatment effect
+### Trial power against true treatment effect
 
 ```{r}
 delta_vals <- seq(0,2, by = 0.2)
@@ -182,6 +141,7 @@ plot(delta_vals, power_50, type = 'l', lwd = 2,
      xlab = 'Treatment effect size', ylab = 'Power', main = 'Power against treatment effect')
 lines(delta_vals, power_10, col = 'blue', lwd = 2)
 lines(delta_vals, power_100, col = 'darkgreen', lwd = 2)
+abline(h = 0.8, lty = 2)
 
 legend('bottomright', c('n = 50', 'n = 10', 'n = 100'), col = c('black', 'blue', 'darkgreen'), lwd = 2, title = 'sample size per arm')
 ```
