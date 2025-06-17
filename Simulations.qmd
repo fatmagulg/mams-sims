@@ -16,6 +16,10 @@ Make a function for data simulation:
 
 ```{r}
 data_sim <- function(mu0, mu1, sd, n){
+  # mu0, mu1: sample means for the two arms
+  # sd: common standard deviation for the two arms
+  # n: per-arm sample size 
+  
   # simulate a vector of outcomes for each arm
   y_0 <- rnorm(n = n, mean = mu0, sd = sd)
   y_1 <- rnorm(n = n, mean = mu1, sd = sd)
@@ -103,6 +107,7 @@ plot(n_vals, power_n, type = 'l',
      sub = 'Treatment effect size = 0.2')
 abline(h = 0.8, lty =2)
 ```
+
 ```{r}
 n_vals <- seq(10,100, by = 5)
 delta_vals <- c(0.01, 0.2, 0.5)
@@ -144,4 +149,107 @@ lines(delta_vals, power_100, col = 'darkgreen', lwd = 2)
 abline(h = 0.8, lty = 2)
 
 legend('bottomright', c('n = 50', 'n = 10', 'n = 100'), col = c('black', 'blue', 'darkgreen'), lwd = 2, title = 'sample size per arm')
+```
+
+## Unequal allocation ratio 
+
+Generalised power expression:
+
+$$
+Power = 1 - \Phi[\Phi^{-1}(1-\alpha) - \frac{\delta_A - \delta_0}{\sqrt{\frac{(1+r)\sigma^2_0}{Nr}+\frac{(1+r)\sigma^2_1}{N}}}]
+$$ {#eq-genpower}
+
+where $r = \frac{n_0}{n_1}$ is the allocation ratio and $N = n_0 +n_1$ is the total sample size. $\delta_0$ is the treatment effect under the null hypothesis and $\delta_A$ is the postulated treatment difference.
+
+The per-arm sample sizes can be obtained from the allocation ratio and total sample size through the equations
+
+$$
+n_0 = \frac{N}{1 + r} ,~~ n_1 = \frac{Nr}{1 + r}
+$$
+
+First, redefine the data simulation function to allow for different sample sizes
+
+```{r}
+data_sim_unequal <- function(mu0, mu1, sd, r, N){
+  # mu0, mu1: sample means for the two arms
+  # sd: common standard deviation for the two arms
+  # N: total sample size (for both arms)
+  
+  n0 = round(N/(1+r))
+  n1 = round((N*r)/(1+r))
+  
+  # simulate a vector of outcomes for each arm
+  y_0 <- rnorm(n = n0, mean = mu0, sd = sd)
+  y_1 <- rnorm(n = n1, mean = mu1, sd = sd)
+  
+  # sample mean outcome for each arm
+  ybar_0 <- mean(y_0)
+  ybar_1 <- mean(y_1)
+  
+  # sample mean difference (ie treatment effect for this sample)
+  deltahat <- ybar_1 - ybar_0
+  
+  return(deltahat)
+}
+
+```
+
+Now update the power calculation function to allow for unequal allocation
+
+```{r}
+power_sim_unequal <- function(mu0, mu1, sd, r, N, nrep = 10000){
+  # mu0, mu1: outcome means for each arm
+  # sd: common standard deviation for outcomes
+  # r: allocation ratio (assuming n0>n1)
+  # N: total sample size
+  # nrep: number of replicates when simulating vector of deltas 
+  
+  deltas <- replicate(nrep, data_sim_unequal(mu0, mu1, sd = sd, r, N))
+  
+  var <- sd^2
+  se <- sqrt( ((1+r)*var/(N*r)) + ((1+r)*var/(N)) )
+  
+  z_scores <- deltas / se
+  power <- mean(abs(z_scores) > qnorm(1 - 0.05 / 2))
+  
+  return(power)
+}
+```
+
+### Detectable effect size against allocation ratio
+
+```{r}
+# detectable effect size for passed parameters
+
+allocs <- seq(1, 10, by = 1)
+deltas <- numeric(length = length(allocs))
+
+N <- 100
+var <- 0.3^2
+
+for(i in 1:length(allocs)){
+  r <- allocs[i]
+  deltas[i] <- sqrt( ((1+r)*var/(N*r)) + ((1+r)*var/(N)) ) * (qnorm(1-0.05/2)-qnorm(0.2))
+  
+}
+
+plot(allocs, deltas, type = 'l', lwd = 2, xlab = 'Allocation ratio', ylab = 'Detecable effect size', main = 'Detectable effect size for different allocation ratios')
+```
+
+### Trial power against allocation ratio 
+
+For a trial with 100 total participants, a true treatment effect of 0.2 and common sd of 0.3:
+
+```{r}
+allocs <- seq(1, 10, by = 1)
+power_alloc <- numeric(length = length(allocs))
+
+for(i in 1:length(allocs)){
+  power_alloc[i] <- power_sim_unequal(2, 2.2, 0.3, r = allocs[i], N = 100)
+  
+}
+
+plot(allocs, power_alloc, type = 'l', lwd = 2, xlab = 'Allocation ratio', ylab = 'Power',
+     main = 'Trial power against allocation ratio')
+abline(h = 0.8, lty = 2)
 ```
