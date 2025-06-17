@@ -12,7 +12,7 @@ Get the treatment effect $\hat{\delta} = \overline{y}_1 - \overline{y}_0$, then 
 
 ### Data simulation function
 
-Make a function for data simulation:
+Make a function for data simulation where $$\hat{\delta} \sim N(\mu_1-\mu_0, \frac{\sigma^2}{n_0}+\frac{\sigma^2}{n_1})$$
 
 ```{r}
 data_sim <- function(mu0, mu1, sd, n){
@@ -20,16 +20,7 @@ data_sim <- function(mu0, mu1, sd, n){
   # sd: common standard deviation for the two arms
   # n: per-arm sample size 
   
-  # simulate a vector of outcomes for each arm
-  y_0 <- rnorm(n = n, mean = mu0, sd = sd)
-  y_1 <- rnorm(n = n, mean = mu1, sd = sd)
-  
-  # sample mean outcome for each arm
-  ybar_0 <- mean(y_0)
-  ybar_1 <- mean(y_1)
-  
-  # sample mean difference (ie treatment effect for this sample)
-  deltahat <- ybar_1 - ybar_0
+  deltahat <- rnorm(n = 1, mean = mu1 - mu0, (2*sd^2)/n)
   
   return(deltahat)
 }
@@ -151,7 +142,7 @@ abline(h = 0.8, lty = 2)
 legend('bottomright', c('n = 50', 'n = 10', 'n = 100'), col = c('black', 'blue', 'darkgreen'), lwd = 2, title = 'sample size per arm')
 ```
 
-## Unequal allocation ratio 
+## Unequal allocation ratio
 
 Generalised power expression:
 
@@ -175,19 +166,7 @@ data_sim_unequal <- function(mu0, mu1, sd, r, N){
   # sd: common standard deviation for the two arms
   # N: total sample size (for both arms)
   
-  n0 = round(N/(1+r))
-  n1 = round((N*r)/(1+r))
-  
-  # simulate a vector of outcomes for each arm
-  y_0 <- rnorm(n = n0, mean = mu0, sd = sd)
-  y_1 <- rnorm(n = n1, mean = mu1, sd = sd)
-  
-  # sample mean outcome for each arm
-  ybar_0 <- mean(y_0)
-  ybar_1 <- mean(y_1)
-  
-  # sample mean difference (ie treatment effect for this sample)
-  deltahat <- ybar_1 - ybar_0
+  deltahat<- rnorm(n = 1, mean = mu1 - mu0, sd = sqrt(sd^2 * (1 + r)^2 / (N * r)))
   
   return(deltahat)
 }
@@ -236,7 +215,7 @@ for(i in 1:length(allocs)){
 plot(allocs, deltas, type = 'l', lwd = 2, xlab = 'Allocation ratio', ylab = 'Detecable effect size', main = 'Detectable effect size for different allocation ratios')
 ```
 
-### Trial power against allocation ratio 
+### Trial power against allocation ratio
 
 For a trial with 100 total participants, a true treatment effect of 0.2 and common sd of 0.3:
 
