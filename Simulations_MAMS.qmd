@@ -1,0 +1,79 @@
+---
+title: "Simulations_MAMS"
+format: html
+editor: visual
+---
+
+# Multi-Arm Multi-Stage Trial Simulation
+
+```{r}
+library(ldbounds)
+```
+
+```{r}
+mams_simulator <- function(mu, sd, n){
+  # mu: vector of means for each group including control
+  # sd: common standard deviation
+  # n: vector of sample sizes across stages 
+  
+  # number of hypothesis tests at first interim:
+  n_tests <- length(mu) - 1
+  
+  y <- list()
+  Z <- numeric(length = n_tests)
+
+  for (i in 1:length(mu)) {
+    y[[i]] <- rnorm(n = n[1], mean = mu[i], sd = sd)
+  }
+
+  for(i in 1:n_tests){ 
+    Z[i] <- (mean(y[[i+1]]) - mean(y[[1]])) / sqrt(2 * sd^2 / n[1])
+  }
+  
+  ## Interim 1: check against efficacy and futility boundaries
+  alpha_bonf <- 0.05 / n_tests # bonferroni adjustment for number of tests at each analysis
+  boundaries <- ldBounds(t = c(0.634, 1), alpha = alpha_bonf, sides = 1, iuse = 1)
+  
+  cat("Stage 1. Number of treatments:", n_tests,"\n")
+  
+  for(i in 1:n_tests){
+    if (Z[i] > boundaries$upper.bounds[1]){
+      cat("Treatment", i, ": Reject H0. Past efficacy boundary \n")
+      }
+    else{
+      cat("Treatment", i, ": Do not reject H0 \n")
+      y <- y[-i] # remove the sample for treatment i from the data vector
+      }
+  }
+  
+  cat("\n")
+  ### STAGE 2 ###
+  n_tests = length(y) - 1
+  cat("Stage 2. Number of treatments:", n_tests,"\n")
+  
+  for (i in 1:length(y)) {
+    y[[i]] <- c(y[[i]], rnorm(n = n[2], mean = mu[i], sd = sd))
+  }
+  
+  for(i in 1:n_tests){ 
+    Z[i] <- (mean(y[[i+1]]) - mean(y[[1]])) / sqrt(2 * sd^2 / (n[1])+n[2])
+  }
+  
+  for(i in 1:n_tests){
+    if (Z[i] > boundaries$upper.bounds[2]){
+      cat("Treatment", i, ": Reject H0. Past efficacy boundary \n")
+      }
+    else{
+      cat("Treatment", i, ": Do not reject H0 \n")
+      }
+  }  
+}
+```
+
+```{r}
+mu <- c(0, 0.2, 0.05)
+n <- c(66,38)
+
+mams_simulator(mu = mu, sd = 0.3, n = n)
+```
+
