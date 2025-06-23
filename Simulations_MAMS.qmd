@@ -10,8 +10,9 @@ editor: visual
 library(ldbounds)
 ```
 
+## Two-stage multi-arm trial simulator function
 ```{r}
-mams_simulator <- function(mu, sd, n){
+twostage_simulator <- function(mu, sd, n){
   # mu: vector of means for each group including control
   # sd: common standard deviation
   # n: vector of sample sizes across stages 
@@ -22,6 +23,7 @@ mams_simulator <- function(mu, sd, n){
   y <- list()
   Z <- numeric(length = n_tests)
 
+  ## STAGE 1 ##
   for (i in 1:length(mu)) {
     y[[i]] <- rnorm(n = n[1], mean = mu[i], sd = sd)
   }
@@ -76,4 +78,72 @@ n <- c(66,38)
 
 mams_simulator(mu = mu, sd = 0.3, n = n)
 ```
+## General MAMS trial simulator function
+```{r}
+mams_simulator <- function(mu, sd, n){
+  # mu: vector of means for each group including control
+  # sd: common standard deviation
+  # n: vector of sample sizes across stages 
+  
+  J <- length(n) # number of stages
+  K <- length(mu) - 1 # number of treatment arms i.e. number of hypothesis tests
+  
+  control_id <- 1
+  active_id <- 2:length(mu)
+  
+  # initialise list to store data vectors
+  y <- vector("list", length = length(mu))  
+  
+  
+  # calculate efficacy boundary - alpha adjusted for both multiple testing and multiple interims
+  alpha_bonf <- 0.05 / K #Bonferroni adjustment for number of tests at each analysis
+  boundaries <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 1)
+  
+  # loop over stages 
+  for(j in 1:J){
+    cat("Stage", j, ". Number of treatments:", length(active_id),"\n")
+    
+    ## simulate samples for stage j and add on to existing samples
+    y[[control_id]] <- c(y[[control_id]], rnorm(n=n[j], mean = mu[control_id], sd = sd)) # control arm
+    for (i in active_id) { # treatment arms 
+      y[[i]] <- c(y[[i]], rnorm(n = n[j], mean = mu[i], sd = sd)) 
+    }
+    
+    # compute Z statistics for each treatment with control and against efficacy boundary
+    Z <- numeric(length(active_id))
+    keep <- logical(length = length(active_id)) 
+    
+    for(k in seq_along(active_id)){ 
+      i <- active_id[k]
+      
+      Z[k] <- (mean(y[[i]]) - mean(y[[control_id]])) / sqrt(2 * sd^2 / sum(n[1:j]))
+      
+      if(Z[k] > boundaries$upper.bounds[j]){ # boundary for stage j
+        cat("Treatment", i-1, ": Reject H0. Past efficacy boundary \n")
+        keep[k] <- TRUE
+      }
+      else{
+        cat("Treatment", i-1, ": Do not reject H0\n")
+      }
+    }
+    
+    # update before next stage
+    active_id <- active_id[keep]
+    K <- length(active_id)
+    
+    # output if all treatment arms are dropped
+    if(length(active_id) == 0){
+      cat("No treatments effective. End trial early at stage", j)
+    }
+  
+    cat("\n")
+  }
+}
+```
 
+```{r}
+mu <- c(0, 0.2, 0.05, 0.03, 0.4)
+n <- c(66,38,34,62)
+
+mams_simulator(mu = mu, sd = 0.3, n = n)
+```
