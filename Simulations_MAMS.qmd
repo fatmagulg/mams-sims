@@ -12,7 +12,7 @@ library(ldbounds)
 
 ## Two-stage multi-arm trial simulator function
 
-```{r}
+```{r two-stage mams trial simulator}
 twostage_simulator <- function(mu, sd, n){
   # mu: vector of means for each group including control
   # sd: common standard deviation
@@ -77,13 +77,23 @@ twostage_simulator <- function(mu, sd, n){
 mu <- c(0, 0.2, 0.05)
 n <- c(66,38)
 
-mams_simulator(mu = mu, sd = 0.3, n = n)
+twostage_simulator(mu = mu, sd = 0.3, n = n)
 ```
 
 ## General MAMS trial simulator function
 
-```{r}
-mams_simulator <- function(mu, sd, n){
+Define a MAMS trial simulator function that takes three arguments: mu, sd, and n.
+
+mu: vector of means for each group, where the first element must correspond to the control group
+
+sd: common standard deviation across groups
+
+n: vector of per-arm sample sizes at each interim, i.e. $n_i$ is the sample size for all arms at interim $i$.
+
+The Type-I error rate is adjusted for multiple hypotheses using a Bonferroni adjustment, as well as for repeated analyses using a Lan-DeMetz alpha-spending function with OBF efficacy boundaries.
+
+```{r mams trial simulator}
+mams_simulator <- function(mu, sd, n, silent = TRUE){
   # mu: vector of means for each group including control
   # sd: common standard deviation
   # n: vector of sample sizes across stages 
@@ -91,6 +101,7 @@ mams_simulator <- function(mu, sd, n){
   J <- length(n) # number of stages
   K <- length(mu) - 1 # number of treatment arms i.e. number of hypothesis tests
   
+  # indices for control and active experimental treatments
   control_id <- 1
   active_id <- 2:length(mu)
   
@@ -98,13 +109,15 @@ mams_simulator <- function(mu, sd, n){
   y <- vector("list", length = length(mu))  
   
   
-  # calculate efficacy boundary - alpha adjusted for both multiple testing and multiple interims
-  alpha_bonf <- 0.05 / K #Bonferroni adjustment for number of tests at each analysis
-  boundaries <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 1)
+  # Calculate efficacy boundary: Lan-DeMetz alpha-spending function
+  #  alpha Bonferroni-adjusted for both multiple testing and multiple interims
+  alpha_bonf <- 0.05 / K 
+  e_boundaries <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 1)
+  f_bound <- 0
   
   # loop over stages 
   for(j in 1:J){
-    cat("Stage", j, ". Number of treatments:", length(active_id),"\n")
+    if(silent == FALSE){cat("Stage", j, ". Number of treatments:", length(active_id),"\n")}
     
     ## simulate samples for stage j and add on to existing samples
     y[[control_id]] <- c(y[[control_id]], rnorm(n=n[j], mean = mu[control_id], sd = sd)) # control arm
@@ -114,121 +127,146 @@ mams_simulator <- function(mu, sd, n){
     
     # compute Z statistics for each treatment with control and against efficacy boundary
     Z <- numeric(length(active_id))
-    keep <- logical(length = length(active_id)) 
+    keep <- logical(length = length(active_id))
     
+    # compute Z statistics for all treatments 
     for(k in seq_along(active_id)){ 
       i <- active_id[k]
       
       Z[k] <- (mean(y[[i]]) - mean(y[[control_id]])) / sqrt(2 * sd^2 / sum(n[1:j]))
-      
-      if(Z[k] > boundaries$upper.bounds[j]){ # boundary for stage j
-        cat("Treatment", i-1, ": Reject H0. Past efficacy boundary \n")
+    }
+    
+    # check Z statistics against stopping boundaries
+    for(k in seq_along(active_id)){ 
+      i <- active_id[k]
+      if(Z[k] > e_boundaries$upper.bounds[j]){
+        if(silent == FALSE){
+          cat("Treatment", i-1, ": Reject H0. Past efficacy boundary \n")}
+      }
+      if(Z[k] < e_boundaries$upper.bounds[j] & Z[k] >= f_bound){
+        if(silent == FALSE){
+          cat("Treatment", i-1, ": Do not reject H0. Within continuation boundaries\n")}
         keep[k] <- TRUE
       }
-      else{
-        cat("Treatment", i-1, ": Do not reject H0\n")
-      }
+      if(Z[k] < f_bound){
+        if(silent == FALSE){
+          cat("Treatment", i-1, ": Reject H0. Drop treatment for futility\n")}}
     }
+    
+    # output if an effective treatment is found
+    crossed <- which(Z > e_boundaries$upper.bounds[j])
+    if(length(crossed) > 0){
+      best <- crossed[which.max(Z[crossed])] # index of the highest Z statistic
+      
+      end_stage <- j
+      effective_trt <- active_id[best - 1]
+      
+      if(silent == FALSE){
+        cat("\nTrial stopped early at stage", j, ". Recommended treatment:", effective_trt, "\n")
+        cat("\n")}
+      
+      return(list(stopped_stage = end_stage,
+                    effective_treatment = effective_trt,
+                    boundaries = e_boundaries$upper.bounds[j],
+                    Z_values = round(Z,2)))
+      }
     
     # update before next stage
     active_id <- active_id[keep]
     K <- length(active_id)
     
-    # output if all treatment arms are dropped
-    if(length(active_id) == 0){
-      cat("No treatments effective. End trial early at stage", j)
-    }
-  
-    cat("\n")
-    
-    
-  }
-}
-```
-
-```{r}
-mu <- c(0, 0.15, 0.28, 0.32, 0.09)
-n <- c(67, 155, 38, 90)
-
-mams_simulator(mu = mu, sd = 0.3, n = n)
-```
-
-```{r}
-mams_sim_silent <- function(mu, sd, n){
-  # mu: vector of means for each group including control
-  # sd: common standard deviation
-  # n: vector of sample sizes across stages 
-  
-  J <- length(n) # number of stages
-  K <- length(mu) - 1 # number of treatment arms i.e. number of hypothesis tests
-  
-  control_id <- 1
-  active_id <- 2:length(mu)
-  
-  # initialise list to store data vectors
-  y <- vector("list", length = length(mu))  
-  
-  
-  # calculate efficacy boundary - alpha adjusted for both multiple testing and multiple interims
-  alpha_bonf <- 0.05 / K #Bonferroni adjustment for number of tests at each analysis
-  boundaries <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 1)
-  
-  # loop over stages 
-  for(j in 1:J){
-    #cat("Stage", j, ". Number of treatments:", length(active_id),"\n")
-    
-    ## simulate samples for stage j and add on to existing samples
-    y[[control_id]] <- c(y[[control_id]], rnorm(n=n[j], mean = mu[control_id], sd = sd)) # control arm
-    for (i in active_id) { # treatment arms 
-      y[[i]] <- c(y[[i]], rnorm(n = n[j], mean = mu[i], sd = sd)) 
-    }
-    
-    # compute Z statistics for each treatment with control and against efficacy boundary
-    Z <- numeric(length(active_id))
-    keep <- logical(length = length(active_id)) 
-    
-    for(k in seq_along(active_id)){ 
-      i <- active_id[k]
-      
-      Z[k] <- (mean(y[[i]]) - mean(y[[control_id]])) / sqrt(2 * sd^2 / sum(n[1:j]))
-      
-      if(Z[k] > boundaries$upper.bounds[j]){ # boundary for stage j
-        #cat("Treatment", i-1, ": Reject H0. Past efficacy boundary \n")
-        keep[k] <- TRUE
-      }
-      else{
-        #cat("Treatment", i-1, ": Do not reject H0\n")
-      }
-    }
-    
-    # update before next stage
-    active_id <- active_id[keep]
-    K <- length(active_id)
     
     # output if all treatment arms are dropped
     if(length(active_id) == 0){
-      #cat("No treatments effective. End trial early at stage", j)
+      if(silent == FALSE){
+        cat("\nNo treatments effective. End trial early at stage", j)
+        cat("\n")}
+      
+      end_stage <- j
+      
+      return(list(stopped_stage = j,
+                  effective_treatment = NA,
+                  Z_values = round(Z,2)))
     }
+    
   
-    #cat("\n")
+    if(silent==FALSE){cat("\n")}
     
     
   }
-  return(length(active_id) > 0)
-}
-```
-
-```{r}
-power_sim_mams <- function(mu, sd, n, nrep = 10000){
-  results <- replicate(nrep, mams_sim_silent(mu, sd, n))
   
-  return(mean(results))
+  best <- which.max(Z)
+  recommended_trt <- active_id[best]
+  
+  if(silent==FALSE){
+    cat("\nTrial ended at final stage", J, ". Recommended treatment:", recommended_trt)
+  }
+  
+  return(list(stopped_stage = J, 
+              effective_treatment = recommended_trt,
+              boundaries = e_boundaries$upper.bounds[J],
+              Z_values = round(Z,2)))
+  
+  
 }
 ```
 
 ```{r}
-mu <- c(0, 0.15, 0.28, 0.43, 0.09)
+ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
+```
+
+```{r}
+mu <- c(0, 0.15, 0.28, 0.28, 0.09)
 n <- c(67, 155, 38, 90)
 
-power_sim_mams(mu = mu, sd = 0.3, n = n)
+mams_simulator(mu = mu, sd = 0.3, n = n, silent = FALSE)
+```
+
+###  Replication function
+
+```{r}
+mams_replicates <- function(mu, sd, n, nrep = 1000){
+  resultsmat <- matrix(data = NA, nrow = nrep, ncol = 2)
+  
+  for(i in 1:nrep){
+    rep <- mams_simulator(mu = mu, sd = sd, n = n, silent = TRUE)
+    
+    resultsmat[i, ] <- c(rep$stopped_stage, rep$effective_treatment)
+  }
+  colnames(resultsmat) <- c("stopped_stage", "effective_treatment")
+    
+  return(as.data.frame(resultsmat))
+}
+```
+
+```{r}
+mu <- c(0, 0.18, 0.20, 0.18, 0.19)
+n <- c(66, 38, 46)
+
+mams_replicates(mu = mu, sd = 0.5, n = n, nrep = 100)
+
+```
+
+Probability of an early stop:
+
+```{r}
+mu <- c(0, 0.18, 0.20, 0.18, 0.19)
+n <- c(66, 38, 46)
+
+Jgrid <- list(120,rep(60,2), rep(40,3), rep(30, 4), rep(24,5), rep(20, 6))
+prob_early <- numeric(length = length(Jgrid))
+
+for(j in 1:length(Jgrid)){
+  n <- Jgrid[[j]]
+  
+  sims <- mams_replicates(mu = mu, sd = 0.5, n = n, nrep = 100)
+  
+  prob_early[j] <- nrow(sims[sims$stopped_stage < length(n),])/nrow(sims)
+}
+
+
+plot(seq(1,length(Jgrid),1), prob_early, type = 'l', xlab = "Number of stages", ylab = "Probability of early stopping", main = "Probability of early stopping vs number of interims for a fixed sample size")
+
+
+
 ```
