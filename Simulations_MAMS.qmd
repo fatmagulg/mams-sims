@@ -92,6 +92,22 @@ n: vector of per-arm sample sizes at each interim, i.e. $n_i$ is the sample size
 
 The Type-I error rate is adjusted for multiple hypotheses using a Bonferroni adjustment, as well as for repeated analyses using a Lan-DeMetz alpha-spending function with OBF efficacy boundaries.
 
+**Return objects:**
+
+stopped_stage: stage that the trial was stopped at
+
+effective_treatment: experimental treatment that is recommended as a result of the trial
+
+boundaries: the boundary used at the final stage to compare Z values against
+
+Z: Z values of the experimental treatments at the final analysis
+
+**Quantities of interest:**
+
+$PET(\delta)$**:** Probability of early termination of the trial
+
+$\mathbb{E}(N|\delta)$**:** Expected sample size
+
 ```{r mams trial simulator}
 mams_simulator <- function(mu, sd, n, silent = TRUE){
   # mu: vector of means for each group including control
@@ -247,14 +263,14 @@ mams_replicates(mu = mu, sd = 0.5, n = n, nrep = 100)
 
 ```
 
-Probability of an early stop:
+## Probability of an early stop
 
 ```{r}
 mu <- c(0, 0.18, 0.20, 0.18, 0.19)
-n <- c(66, 38, 46)
 
-Jgrid <- list(120,rep(60,2), rep(40,3), rep(30, 4), rep(24,5), rep(20, 6))
+Jgrid <- list(rep(60,2), rep(40,3), rep(30, 4), rep(24,5), rep(20, 6))
 prob_early <- numeric(length = length(Jgrid))
+stopped_stage <- numeric()
 
 for(j in 1:length(Jgrid)){
   n <- Jgrid[[j]]
@@ -262,11 +278,62 @@ for(j in 1:length(Jgrid)){
   sims <- mams_replicates(mu = mu, sd = 0.5, n = n, nrep = 100)
   
   prob_early[j] <- nrow(sims[sims$stopped_stage < length(n),])/nrow(sims)
+  
+  stopped_stage <- c(stopped_stage, sims$stopped_stage)
 }
 
 
-plot(seq(1,length(Jgrid),1), prob_early, type = 'l', xlab = "Number of stages", ylab = "Probability of early stopping", main = "Probability of early stopping vs number of interims for a fixed sample size")
+plot(seq(2,length(Jgrid)+1,1), prob_early, type = 'l', pch = '1', xlab = "Number of stages", ylab = "Probability of early stopping", main = "Probability of early stopping vs number of interims")
+
+hist(stopped_stage, breaks = 6)
+
+```
+
+### Type I error rate
+
+Probability of rejecting any null hypothesis when the global null is true
+
+```{r}
+n_interims <- rep(24,5)
+type1 <- numeric(length = length(n_interims))
+stopped_stage <- numeric()
+
+for(j in 1:length(n_interims)){
+  n <- n_interims[[j]]
+  
+  sims <- mams_replicates(mu = c(0, 0, 0, 0, 0), sd = 1, n = n, nrep = 100)
+  
+  type1[j] <- mean(!is.na(res$effective_treatment)) # prob of not! having an NA effective treatment
+  
+  stopped_stage <- c(stopped_stage, sims$stopped_stage)
+}
 
 
+plot(seq(2,length(n_interims)+1,1), type1, type = 'l', pch = '1', xlab = "Number of stages", ylab = "Type I error rate", main = "Type I error rate vs number of interims for a fixed sample size")
+```
+
+```{r}
+n_list <- list(
+  small = c(20, 20),       # total N = 40
+  medium = c(20, 20, 20),  # total N = 60
+  large = c(20, 20, 20, 20), # total N = 80
+  xl = c(20, 20, 20, 20, 20) # total N = 100
+)
+type1 <- numeric(length(n_list))
+total_N <- numeric(length(n_list))
+
+for(j in seq_along(n_list)){
+  n <- n_list[[j]]
+  
+  sims <- mams_replicates(mu = c(0, 0, 0, 0, 0), sd = 1, n = n, nrep = 5000)
+  
+  type1[j] <- mean(!is.na(sims$effective_treatment))
+  total_N[j] <- sum(n)
+}
+
+plot(total_N, type1, type = 'b', pch = 19,
+     xlab = "Total sample size", ylab = "Type I error rate",
+     main = "Type I error vs accumulated sample size")
+abline(h = 0.05, col = "red", lty = 2)  # nominal alpha line
 
 ```
