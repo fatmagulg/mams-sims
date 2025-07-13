@@ -227,9 +227,13 @@ mams_simulator <- function(mu, sd, n, silent = TRUE){
 }
 ```
 
+#### Example of Lan-DeMetz boundaries:
+
 ```{r}
 ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
 ```
+
+#### Example of a MAMS trial simulation
 
 ```{r}
 mu <- c(0, 0.15, 0.28, 0.28, 0.09)
@@ -238,7 +242,7 @@ n <- c(67, 155, 38, 90)
 mams_simulator(mu = mu, sd = 0.3, n = n, silent = FALSE)
 ```
 
-###  Replication function
+## Replication function
 
 ```{r}
 mams_replicates <- function(mu, sd, n, nrep = 1000){
@@ -251,7 +255,11 @@ mams_replicates <- function(mu, sd, n, nrep = 1000){
   }
   colnames(resultsmat) <- c("stopped_stage", "effective_treatment")
     
-  return(as.data.frame(resultsmat))
+  #return(resultsmat)
+  
+  resultsdf <- as.data.frame(resultsmat)
+  
+  PET <- 0
 }
 ```
 
@@ -259,11 +267,21 @@ mams_replicates <- function(mu, sd, n, nrep = 1000){
 mu <- c(0, 0.18, 0.20, 0.18, 0.19)
 n <- c(66, 38, 46)
 
-mams_replicates(mu = mu, sd = 0.5, n = n, nrep = 100)
+res <- as.data.frame(mams_replicates(mu = mu, sd = 0.5, n = n, nrep = 100))
 
 ```
 
-## Probability of an early stop
+```{r}
+nrow(res[res$stopped_stage == 2, ])
+```
+
+## Estimated sample size 
+
+```{r}
+#ess <- function((mu, sd, n, nrep = 1000){}
+```
+
+### Probability of an early stop
 
 ```{r}
 mu <- c(0, 0.18, 0.20, 0.18, 0.19)
