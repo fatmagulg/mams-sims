@@ -216,7 +216,7 @@ mams_alphasp <- function(mu, sd, n, silent = TRUE){
   
   # Treatment recommendation 
   best <- which.max(Z)
-  recommended_trt <- active_id[best]
+  recommended_trt <- active_id[best - 1]
   
   if(silent==FALSE){
     cat("\nTrial ended at final stage", J, ". Recommended treatment:", recommended_trt)
@@ -235,7 +235,8 @@ mams_alphasp <- function(mu, sd, n, silent = TRUE){
 #### Example of calculation of Lan-DeMetz boundaries:
 
 ```{r}
-ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
+n = c(30,30,30)
+ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
 ```
 
 ```{r}
@@ -247,7 +248,8 @@ bounds$upper.bounds
 
 ```{r}
 mu <- c(0, 0.15, 0.28, 0.28, 0.09); n <- c(20,20,20)
-trial <- mams_simulator(mu = mu, sd = 0.3, n = n, silent = FALSE)
+#mu <- c(0,0,0,0,0) ; n <- c(30,30,30)
+trial <- mams_alphasp(mu = mu, sd = 0.3, n = n, silent = FALSE)
 trial$efficacy_boundaries
 
 plot(x = seq_along(n), y = trial$efficacy_boundaries, type = 'b', xlab = 'Interim analysis', ylab = 'OBF Efficacy Boundary', 
@@ -278,7 +280,7 @@ mams_replicates <- function(mu, sd, n, nrep = 1000){
   resultsmat <- matrix(data = NA, nrow = nrep, ncol = 2)
   
   for(i in 1:nrep){
-    rep <- mams_simulator(mu = mu, sd = sd, n = n, silent = TRUE)
+    rep <- mams_alphasp(mu = mu, sd = sd, n = n, silent = TRUE)
     
     resultsmat[i, ] <- c(rep$stopped_stage, rep$effective_treatment)
   }
@@ -306,7 +308,7 @@ n <- c(66, 38, 46)
 
 reps <- mams_replicates(mu = mu, sd = 0.5, n = n, nrep = 100)
 
-reps
+reps$results
 ```
 
 ## Expected sample size
@@ -428,8 +430,7 @@ plot(effects, power_est, type = 'l', main = "Power estimates when only one treat
 ```{r}
 design_grid <- expand.grid(
   n_stages = c(2, 3),
-  n_arms = c(2, 4),
-  effect_size = c(0, 0.5, 1)
+  n_perstage = c(60, 40)
 )
 
 ```
@@ -444,12 +445,14 @@ This version of the MAMS trial simulator function does not use an alpha-spending
 
 `sd` : common group standard deviation
 
-`n` : sample size added per stage
+`n` : sample size added per stage for experimental arms
 
 `Mu` : matrix of group means; stack of group mean vectors for different Type I/II scenarios
 
+`r` : allocation ratio, $r = \frac{n_0}{n_1}$ , $n_1 =$ `n`
+
 ```{r}
-mams_ef <- function(l, u, sd = 1, n, mu){
+mams_ef <- function(l, u, sd = 1, n, mu, r = 1){
   J <- length(n) # number of stages
   K <- length(mu) - 1 # number of treatment arms i.e. number of hypothesis tests
   
@@ -460,10 +463,12 @@ mams_ef <- function(l, u, sd = 1, n, mu){
   # initialise list to store data vectors
   y <- vector("list", length = length(mu))
 
+  # initiliase a running total of overall sample size
+  total_N <- 0
   
 #--------- loop over stages 
   for(j in 1:J){
-    y[[control_id]] <- c(y[[control_id]], rnorm(n=n[j], mean = mu[control_id], sd = sd))
+    y[[control_id]] <- c(y[[control_id]], rnorm(n=r*n[j], mean = mu[control_id], sd = sd))
     
     for (i in active_id) { # treatment arms 
       y[[i]] <- c(y[[i]], rnorm(n = n[j], mean = mu[i], sd = sd)) 
@@ -477,7 +482,9 @@ mams_ef <- function(l, u, sd = 1, n, mu){
     for(k in seq_along(active_id)){ 
       i <- active_id[k]
       
-      Z[k] <- (mean(y[[i]]) - mean(y[[control_id]])) / sqrt(2 * sd^2 / sum(n[1:j]))
+      nT <- sum(n[1:j]) # treatment arm current stage sample size 
+      nC <- r * nT # control arm current stage sample size 
+      Z[k] <- (mean(y[[i]]) - mean(y[[control_id]])) / sqrt(sd^2 * (1/nT + 1/nC))
     }
     
     # get stopping boundaries for the current stage
@@ -486,7 +493,7 @@ mams_ef <- function(l, u, sd = 1, n, mu){
     
     # check Z statistics against stopping boundaries
     for(k in seq_along(active_id)){ 
-      i <- active_id[k]
+      ##i <- active_id[k]
       
       if(Z[k] > e){}
       
@@ -503,28 +510,34 @@ mams_ef <- function(l, u, sd = 1, n, mu){
       best <- crossed[which.max(Z[crossed])] 
       
       end_stage <- j
-      effective_trt <- active_id[best - 1]
+      effective_trt <- seq_along(active_id)[best]
+      
+      total_N <- total_N + n[j]*K + n[j]*r
       
       return(list(stopped_stage = end_stage,
                     effective_treatment = effective_trt,
                     end_boundary = e,
                     active_treatments = active_id-1,
-                    Z_values = round(Z,2)))
+                    Z_values = round(Z,2), 
+                    total_N = total_N))
       }
     
-    # update before next stage
+    # if no effective treatment is found: update and continue to next stage
+    total_N <- total_N + n[j]*K  + n[j]*r # sample that was just used 
     active_id <- active_id[keep]
     K <- length(active_id)
-    
     
     # output if all treatment arms are dropped
     if(length(active_id) == 0){
       
       end_stage <- j
       
+      total_N <- total_N + n[j]*K + n[j]*r
+      
       return(list(stopped_stage = j,
                   effective_treatment = NA,
-                  Z_values = round(Z,2)))
+                  Z_values = round(Z,2), 
+                  total_N = total_N))
     }
     
     
@@ -533,18 +546,19 @@ mams_ef <- function(l, u, sd = 1, n, mu){
   
   # Treatment recommendation 
   best <- which.max(Z)
-  recommended_trt <- active_id[best]
+  recommended_trt <- seq_along(active_id)[best]
   
   return(list(stopped_stage = J, 
               effective_treatment = recommended_trt,
               end_boundary = u[J],
               active_treatments = active_id-1,
-              Z_values = round(Z,2)))
+              Z_values = round(Z,2), 
+              total_N = total_N))
 
 }
 ```
 
-## Replication function
+## Replication function & Type I error rate
 
 The replication function takes the same arguments as the simulation function `mams_ef` plus an additional argument, `nrep = 1000`. The function produces `nrep` replicates of the trial specified by the other arguments and returns the following values:
 
@@ -555,15 +569,15 @@ The replication function takes the same arguments as the simulation function `ma
 `ESS_trial`: expected sample size for the whole trial (i.e. for all arms)
 
 ```{r}
-mams_replicates2 <- function(l, u, mu, sd = 1, n, nrep = 1000){
-  resultsmat <- matrix(data = NA, nrow = nrep, ncol = 2)
+mams_replicates2 <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
+  resultsmat <- matrix(data = NA, nrow = nrep, ncol = 3)
   
   for(i in 1:nrep){
-    rep <- mams_ef(l = l, u = u, sd = sd, n = n, mu = mu)
+    rep <- mams_ef(l = l, u = u, sd = sd, n = n, mu = mu, r = r)
     
-    resultsmat[i, ] <- c(rep$stopped_stage, rep$effective_treatment)
+    resultsmat[i, ] <- c(rep$stopped_stage, rep$effective_treatment, rep$total_N)
   }
-  colnames(resultsmat) <- c("stopped_stage", "effective_treatment")
+  colnames(resultsmat) <- c("stopped_stage", "effective_treatment", "total_N")
   
   resultsdf <- as.data.frame(resultsmat)
   
@@ -574,21 +588,53 @@ mams_replicates2 <- function(l, u, mu, sd = 1, n, nrep = 1000){
     # Probability of the trial stopping at stage i
     p_earlystop[i] <- nrow(resultsdf[resultsdf$stopped_stage == i, ])/nrep
   }
-
+  
+  # calculate ESS using distribution of p_earlystop
   ESS_arm <- sum(cumsum(n)*p_earlystop) 
   ESS_trial <- ESS_arm * length(mu)
   
-  return(list(early_stop_prob = p_earlystop, ESS_per_arm = ESS_arm, ESS_trial = ESS_trial))
+  # calculate ESS using total_N from sim function mams_ef
+  ESS_trial2 <- mean(resultsdf$total_N)
+  
+  if(all(mu == 0)){
+    TypeI <- mean(!is.na(resultsdf$effective_treatment))}
+  else{
+    TypeI <- NA
+  }
+  
+  return(list(early_stop_prob = p_earlystop, ESS_per_arm = ESS_arm, ESS_trial = ESS_trial, ESS_trial2 = ESS_trial2, TypeIrate = TypeI, results = resultsdf
+              ))
 }
 ```
 
 ```{r}
 LFC <- c(0, 0.545,0.178,0.178, 0.178)
 HG <- c(rep(0,5))
-mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = LFC )$early_stop_prob
+mams_ef(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG)
+size <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG)$results
+
+plot(density(size$total_N), main = "Density of ESS", xlab = "Total (Running) Sample Size")
+abline(v = mean(size$total_N), col = "red", lty = 2)
+abline(v = 450, col = 'blue')
 ```
 
-### Scenario function
+```{r}
+set.seed(123)
+boot_means <- replicate(1000, mean(sample(size$total_N, replace = TRUE)))
+
+# Bootstrap percentile interval
+quantiles <- quantile(boot_means, probs = c(0.025, 0.975))
+
+plot(density(size$total_N), main = "Density of ESS", xlab = "Total Sample Size")
+abline(v = mean(size$total_N), col = "red", lty = 2)
+abline(v = quantiles[[1]], col = 'blue') ; abline(v = quantiles[[2]], col = 'blue') 
+
+boot_se <- sd(boot_means)
+boot_mean <- mean(boot_means)
+boot_ci_norm <- boot_mean + c(-1.96, 1.96) * boot_se
+```
+
+## Scenario function
 
 `mams_hyp` produces the ESS for different scenarios of the null hypothesis. The function takes the same arguments as `mams_replicates2`, but instead of the mean vector `mu`, a matrix `Mu` whose columns consist of mean vectors for different null hypothesis scenarios must be passed.
 
@@ -596,23 +642,41 @@ mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), 
 mams_hyp <- function(l, u, n, sd = 1, Mu, nrep = 1000){
   
   ESS <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
+  interval <- list()
+  TypeI <- NA
   
   for(h in 1:ncol(Mu)){
     mu <- Mu[,h]
     
     reps <- mams_replicates2(l = l, u = u, sd = sd, n = n, mu = mu, nrep = nrep)
     
-    ESS[h] <- reps$ESS_trial
+    ESS[h] <- reps$ESS_trial2
+    
+    boot_means <- replicate(1000, mean(sample(reps$results$total_N, replace = TRUE)))
+    quantiles <- quantile(boot_means, probs = c(0.025, 0.975))
+    interval[[h]] <- quantiles
+    
+    if(all(mu == 0)){
+      TypeI <- reps$TypeIrate
+    }
   }
   
   ESS <- cbind(n[1]*length(n)*nrow(Mu), ESS)
   dimnames(ESS)[[2]][1] <- 'MaxN'
   
-  return(ESS)
+  return(list(ESS = ESS, CI = interval, TypeI = TypeI))
 }
 ```
 
-### Reproducing results from Wason & Jaki (2011) - TAILoR trial 
+```{r}
+LFC <- c(0, 0.545,0.178,0.178, 0.178)
+HG <- c(rep(0,5))
+Mu <- cbind(HG, LFC)
+
+mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), Mu = Mu)
+```
+
+### Reproducing results from Wason & Jaki (2011) - TAILoR trial
 
 Using the simulation and replication functions above, ESS are estimated for the following scenarios:
 
@@ -633,8 +697,26 @@ threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(3
 
 fourstage <- mams_hyp(l = c(0, 0, 0, 2.1875), u = c(4.375, 3.094, 2.526, 2.188), n = rep(24,4), Mu = Mu)
 
-results <- rbind(twostage, threestage, fourstage)
+results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
 rownames(results) <- c("2stage", "3stage", "4stage")
+
+type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+
+results
+```
+
+```{r}
+set.seed(123)
+boot_means <- replicate(1000, mean(sample(size$total_N, replace = TRUE)))
+
+# Bootstrap percentile interval
+quantiles <- quantile(boot_means, probs = c(0.025, 0.975))
+
+plot(density(size$total_N), main = "Density of ESS", xlab = "Total Sample Size")
+abline(v = mean(size$total_N), col = "red", lty = 2)
+abline(v = quantiles[[1]], col = 'blue') ; abline(v = quantiles[[2]], col = 'blue') 
+
+results[,'HG']
 ```
 
 ```{r}
@@ -643,13 +725,104 @@ colours <- c("darkred", "darkgreen", "navy")
 plot(1:ncol(results), results[1,], type = "o", col = colours[1], pch = 16,
      xaxt = "n", ylim = range(results),
      xlab = "Scenario", ylab = "Expected Sample Size (ESS)",
-     main = "ESS Across Different Scenarios")
+     main = "ESS Across Different Scenarios (OBF Boundaries)")
 for (i in 2:nrow(results)) {
   lines(1:ncol(results), results[i,], type = "o", col = colours[i], pch = 16)
 }
 axis(side = 1, at = 1:ncol(results), labels = colnames(results))
 
-legend("topright", legend = c("Two-stage", "Three-stage", "Four-stage"), title = "Scenario", col = colours, pch = 16)
+legend("topright", legend = c("Two-stage", "Three-stage", "Four-stage"), title = "Number of stages", col = colours, pch = 16)
 ```
 
-### Simulating scenarios for MODULATE trial
+```{r}
+colours <- c("darkred", "darkgreen", "navy")
+
+plot(1:nrow(results), results[,1], type = "o", col = colours[1], pch = 16,
+     xaxt = "n", ylim = range(results),
+     xlab = "Number of stages", ylab = "Expected Sample Size (ESS)",
+     main = "ESS for different numbers of stages and scenarios (OBF)")
+for (i in 2:ncol(results)) {
+  lines(1:nrow(results), results[,i], type = "o", col = colours[i], pch = 16)
+}
+axis(side = 1, at = 1:ncol(results), labels = c("Two", "Three", "Four"))
+
+legend(x = 2.75, y = 460, legend = c("MaxN", "HG", "LFC"), title = "Scenario", col = colours, pch = 16)
+
+```
+
+```{r}
+plot(1:3, type1rates, type = 'p', pch = 16, main = 'Type I error rate for different numbers of stages (OBF Boundaries)',
+     xaxt = 'n', xlab = "Number of stages", ylab = "Type I Error rate", 
+     col = colours)
+axis(side = 1, at = 1:3, labels = c("Two", "Three", "Four"))
+abline(h = 0.05, lty = 2)
+```
+
+### \*Simulating scenarios for MODULATE trial
+
+The MODULATE trial is a Phase 2 and 3 trial:
+
+Phase 3:
+
+-   R = 2
+
+-   Power = 0.9
+
+-   $\delta$ = 0.16
+
+## \*Grid search over trial parameters
+
+```{r}
+Jgrid <- list(rep(60,2), rep(40,3), rep(30, 4)) # Total N = 120
+
+r_grid <- c(1, 1.5, 2)
+
+
+results <- list()
+counter <- 1
+
+l_stages = list(c(0, 2.169), c(0, 0, 2.182), c(0, 0, 0, 2.1875))
+u_stages = list(c(3.068, 2.169), c(3.779, 2.672, 2.182), c(4.375, 3.094, 2.526, 2.188))
+
+mu <- c(0, 0.545, 0.178, 0.178, 0.178)  # LFC
+sd <- 1
+nrep <- 1000
+
+for (i in seq_along(Jgrid)) {
+  n <- Jgrid[[i]]
+  l <- l_stages[[i]]
+  u <- u_stages[[i]]
+  
+  for (r in r_grid) {
+
+    sim <- mams_replicates2(l = l, u = u, mu = mu, sd = sd, n = n, r = r, nrep = nrep)
+
+    results[[counter]] <- list(
+      stages = length(n),
+      r = r,
+      ESS = sim$ESS_trial,
+      TypeI = sim$TypeIrate
+    )
+    counter <- counter + 1
+  }
+}
+
+results_df <- do.call(rbind, lapply(results, as.data.frame))
+```
+
+```{r}
+library(scatterplot3d)
+
+x <- results_df$stages
+y <- results_df$r
+z <- results_df$ESS
+
+plot <- scatterplot3d(x,y,z,
+              xlab = "Stages",
+              ylab = "Allocation ratio",
+              zlab = "ESS",
+              pch = 16, color = "blue", cex.symbols = 2,
+              main = "3D Scatterplot of ESS", 
+              angle = 60)
+
+```
