@@ -6,6 +6,8 @@ editor: visual
 
 # Multi-Arm Multi-Stage Trial Simulation
 
+test
+
 ```{r}
 library(ldbounds)
 ```
@@ -452,7 +454,7 @@ This version of the MAMS trial simulator function does not use an alpha-spending
 `r` : allocation ratio, $r = \frac{n_0}{n_1}$ , $n_1 =$ `n`
 
 ```{r}
-mams_ef <- function(l, u, sd = 1, n, mu, r = 1){
+mams_ef <- function(l, u, sd = 1, n, mu, r = 1, silent = TRUE){
   J <- length(n) # number of stages
   K <- length(mu) - 1 # number of treatment arms i.e. number of hypothesis tests
   
@@ -468,6 +470,8 @@ mams_ef <- function(l, u, sd = 1, n, mu, r = 1){
   
 #--------- loop over stages 
   for(j in 1:J){
+    if(silent == FALSE){cat("Stage", j, ". Number of treatments:", length(active_id),"\n")}
+    
     y[[control_id]] <- c(y[[control_id]], rnorm(n=r*n[j], mean = mu[control_id], sd = sd))
     
     for (i in active_id) { # treatment arms 
@@ -495,13 +499,14 @@ mams_ef <- function(l, u, sd = 1, n, mu, r = 1){
     for(k in seq_along(active_id)){ 
       ##i <- active_id[k]
       
-      if(Z[k] > e){}
+      if(Z[k] > e){ if( silent == FALSE){cat("Treatment", k, "crossed efficacy bound\n")}}
       
       if(Z[k] < e & Z[k] >= f){
         keep[k] <- TRUE
+        if(silent == FALSE){cat("Treament", k, "within continuation boundaries\n")}
       }
       
-      if(Z[k] < f){}
+      if(Z[k] < f){if(silent == FALSE){cat("Treatment", k, "crossed futility bound\n")}}
     }
     
     # output if an effective treatment is found
@@ -532,7 +537,7 @@ mams_ef <- function(l, u, sd = 1, n, mu, r = 1){
       
       end_stage <- j
       
-      total_N <- total_N + n[j]*K + n[j]*r
+      #total_N <- total_N + n[j]*K + n[j]*r
       
       return(list(stopped_stage = j,
                   effective_treatment = NA,
@@ -610,12 +615,12 @@ mams_replicates2 <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
 ```{r}
 LFC <- c(0, 0.545,0.178,0.178, 0.178)
 HG <- c(rep(0,5))
-mams_ef(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG)
-size <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG)$results
+mams_ef(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG, silent = FALSE)
+#size <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG)$results
 
-plot(density(size$total_N), main = "Density of ESS", xlab = "Total (Running) Sample Size")
-abline(v = mean(size$total_N), col = "red", lty = 2)
-abline(v = 450, col = 'blue')
+#plot(density(size$total_N), main = "Density of ESS", xlab = "Total (Running) Sample Size")
+#abline(v = mean(size$total_N), col = "red", lty = 2)
+#abline(v = 450, col = 'blue')
 ```
 
 ```{r}
