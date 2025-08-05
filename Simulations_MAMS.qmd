@@ -254,7 +254,8 @@ mu <- c(0, 0.15, 0.28, 0.28, 0.09); n <- c(20,20,20)
 trial <- mams_alphasp(mu = mu, sd = 0.3, n = n, silent = FALSE)
 trial$efficacy_boundaries
 
-plot(x = seq_along(n), y = trial$efficacy_boundaries, type = 'b', xlab = 'Interim analysis', ylab = 'OBF Efficacy Boundary', 
+plot(x = seq_along(n), y = trial$efficacy_boundaries, type = 'b', xlab = 'Interim analysis',
+     ylab = 'OBF Efficacy Boundary', 
      ylim = c(0,ceiling(max(trial$Z_values))), xaxt = 'n')
 axis(side = 1, at = seq_along(n))
 points(trial$stopped_stage, max(trial$Z_values), col = 'navy', pch = 8)
@@ -709,8 +710,25 @@ results
 ```
 
 ```{r}
-plot(x = seq(1, 4), y = c(4.375, 3.094, 2.526, 2.188), type = 'b', ylim = c(-1, 5))
-lines(x = seq(1, 4), y = c(0, 0, 0, 2.1875), type = 'b')
+u = c(4.375, 3.094, 2.526, 2.188); l = c(0, 0, 0, 2.1875)
+#l = c(0, 0, 2.182); u = c(3.779, 2.672, 2.182)
+
+x = seq(1, length(u))
+ymax = ceiling(u[1])
+
+plot(x = x, y = u, type = 'b', ylim = c(-1, ymax), xaxt = 'n',
+     xlab = "Interim analysis", ylab = "Z-statistic", main = "Stopping bounds for TAILoR trial")
+axis(side = 1, at = x)
+lines(x = x, y = l, type = 'b')
+
+x_eff <- c(x, rev(x))
+y_eff <- c(u, rep(ymax, length(x)))
+
+x_fut <- x_eff
+y_fut <- c(rep(-1, length(x)), rev(l))
+
+polygon(x_eff, y_eff, col = "#6BD7AF80", border = NA, density = 10, angle = 45)
+polygon(x_fut, y_fut, col = "salmon", border = NA, density = 10, angle = 45)
 ```
 
 ```{r}
