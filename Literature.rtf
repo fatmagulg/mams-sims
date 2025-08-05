@@ -1,0 +1,198 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2636
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica-Bold;\f1\fswiss\fcharset0 Helvetica;\f2\fswiss\fcharset0 Helvetica-Oblique;
+\f3\fnil\fcharset0 .AppleSystemUIFontMonospaced-Regular;\f4\froman\fcharset0 Times-Roman;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red255\green255\blue255;\red59\green59\blue59;
+\red0\green0\blue0;\red42\green49\blue64;\red14\green18\blue29;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;\cssrgb\c100000\c100000\c100000;\cssrgb\c29804\c29804\c29804;
+\csgray\c0\c0;\cssrgb\c21569\c25490\c31765;\cssrgb\c6667\c9412\c15294;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww28300\viewh14200\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ri-11301\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f0\b\fs24 \cf0 	Wason & Mander, 2012, Minimising the expected sample size in two-stage continuous phase II clinical trials with continuous outcomes \
+
+\f1\b0 - 
+\f2\i optimised design for two-stage trials
+\f0\i0\b \
+\
+	Wason, Mander, Thompson, 2010, Optimal multistage designs for randomised clinical trials with continuous outcomes\
+
+\f1\b0 - 
+\f2\i optimised design for multi-stage trials (generalisation of Wason & Mander 2012)
+\f1\i0 \
+- optimal design: minimum expected sample size conditional on a specific value for the treatment effect - although in practice the true treatment effect could deviate from the designed value\
+- delta-minimax design: maximum ESS is minimised amongst all designs that meet the type I and II error constraints\
+- feasible design: significance level and power meet the required constraints\
+- worst-case scenario treatment effect: delta-tilde, value of delta which gives the highest expected sample size for a particular design \
+- ESS is a function of the probabilities of the trial stopping at each interim and n1 (group size per stage - group sizes are fixed so all ni are equal - defined in 2.1)\
+- optimal design: feasible design with lowest max ESS at a particular treatment effect delta. 
+\f0\b \
+\
+	Wason & Jaki, 2011, Optimal design of multi-arm multi-stage trials\
+
+\f1\b0 - (mention) ESS - Expected sample size\
+- optimal design: design which is feasible (has correct type i error rate and power) and has the minimum ESS amongst all other feasible designs (2.4)\
+- ESS depends on treatment differences \
+
+\f0\b \
+\
+	Wason et al, 2012, Some recommendations for multi-arm multi-stage trials
+\f1\b0 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+\cf0 - (mention) multiple Dunnett test, strong control of FWER\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ri-10895\sl288\slmult1\pardirnatural\partightenfactor0
+\cf0 - Power: LFC least favourable configuration \
+- \'93the probability of rejecting any null hypothesis is determined only by the stopping boundaries, and not the group size used as the mean of each test statistic is 0 under the null hypothesis, regardless of n.\'94 \'85 \'93 one can find a MAMS design by first choosing stopping boundaries that give the correct FWER, and then subsequently choose a group size to power the trial\'94\
+\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+\cf0 \
+	
+\f0\b Pocock, 1977, Group sequential methods in the design and analysis of clinical trials\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f2\i\b0 \cf0 -
+\f1\i0  introduces Pocock efficacy boundaries \
+- flat across interims, reduced power by the end \
+- specify number of interims at the start\
+\
+	
+\f0\b O\'92Brien & Fleming, 1979, A Multiple Testing Procedure for Clinical Trials \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f1\b0 \cf0 - introduces OBF efficacy boundaries\
+- very conservative at the start, less at the end\
+- conserves full power by the end of the trial\
+- specify number of interims at the start\
+- procedure uses Brownian motion \
+\
+	
+\f0\b Stratton & Whitehead, 1983, Group Sequential Clinical Trials with Triangular Continuation Regions\
+
+\f1\b0 - compute triangular decision boundary (efficacy & futility) where Z (vertical axis) depends on V (horizontal axis - information available at a particular interim)\
+- specify number of interims at the start\
+- Brownian motion\
+\
+	
+\f0\b Lan & DeMetz, 1983, Discrete sequential boundaries for clinical trials\
+
+\f1\b0 - after Pocock, OBF\
+- calculate significance level at each interim using an alpha spending function\
+- don\'92t need to specify number of interims at the start\
+- Brownian motion\
+\
+	
+\f0\b Magirr et al, 2012, A generalised Dunnett test for multi-arm multi-stage clinical studies with treatment selection\
+
+\f1\b0 - derive efficacy and futility boundaries\
+- FWER\
+- accommodates Pocock, OBF, and triangular decision boundaries. \
+- Dunnett test; generalised to multiple stages\
+- number of treatment arms at any stage doesn\'92t need to be pre-defined, any number of patients per stage\
+- stopping boundaries do not depend on sample size\
+- Power: LFC\
+- \'93correlation between test statistics arises solely from the common control responses\'94\
+- ESS - computing expected sample size\
+\
+	
+\f0\b Dunnett, 1955, A multiple comparison procedure for comparing several treatments with a control\
+
+\f1\b0 - multiplicity adjustment for testing multiple hypotheses at once (single-stage)\
+- probability of all null hypotheses being rejected \
+\
+\
+	
+\f0\b Jennison & Turnbull, 2000, Group sequential designs with applications to clinical trials (book)\
+
+\f1\b0 - Pocock\'92s Test (from Pocock 1977) - chapter 2.4\
+- alpha-spending approach (Lan & DeMetz) (chapter 7.2.1)\
+- Bonferroni adjustment for multiple testing ; Follman et al (1994) show that Bonferroni is a fine adjustment to use in place of more complex ones (chapter 16.3 Example, paragraph 2)\
+- covariance between Z-statistics Zi, Zj in consecutive stages i < j is sqrt(ni/nj) (verify - cited in Wason 2011 Optimal multistage)\
+\
+\
+	
+\f0\b Willan & Pinto, 2005, The value of information and optimal clinical trial design\
+
+\f1\b0 - Typical values for type I error rate and power are arbitrary \
+- choice of delta can be chosen less arbitrarily by polling clinicians and decision makers however in practice it is usually back-solved from the sample size equation \
+- deep into money stuff\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f0\b \cf0 \
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 	Choodari-Oskooei et al, 2023, Treatment selection in multi-arm multi-stage designs: With application to a postpartum haemorrhage trial\kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f1\b0 \cf0 - RED trial - postpartum haemorrhage \
+- alternative definition of power and \'93probability of correct selection\'94 (of correct treatment arm to second stage)\
+- \'93full MAMS design\'94: no pre-specified number of arms allowed to progress to later stages of trial; if all treatment arms are within stopping boundaries, in theory they could all make it through to the last recruitment stage and the overall sample size would be the maximum sample size\
+- \'93pre-specified treatment selection\'94/\'93MAMS selection design\'94: MAMS design where only a pre-specified number of arms are allowed to progress to later stages, e.g. the first stage is multi-arm but only two treatment arms are allowed to progress to stage 2 (eg. MODULATE trial)\
+- minimax criterion: minimising the maximum sample size 
+\f0\b \
+
+\f1\b0 - allocation ratio: fixed-sample (one-stage) multi-arm trial - optimal allocation ratio = sqrt(K)\
+	- allocating more to the experimental arms during the selection stage decreases uncertainty of the estimated treatment effect; increases probability of correct selection and power of the trial \
+- what point in the trial is best to select the treatment that will progress to the next stage (i.e what % of information time) - their results suggest that 17% information time gives the lowest 
+\f0\b \
+\
+\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\
+Trial case studies:\
+
+\f1\b0 - Kim & DeMetz (1992) Thrombolytic Intervention in Myocardial Infarction Trial - binary outcome \
+\
+- Choodari-Oskooei et al (2023) RED (postpartum haemorrhage) - binary outcome\
+- \'93\expnd0\expndtw0\kerning0
+phase III randomised clinical trial that uses the MAMS selection design investigating the efficacy of three different tamponade devices (the Ellavi fixed-volume uterine balloon tamponade (UBT), the Ellavi free-flow UBT, and the Suction Tube Uterine Tamponade (STUT) device) against the control device, the Foley catheter. The trial starts with randomisation at equal allocation ratio to three research arms and a control. One research arm is selected at stage 1 to continue to stage 2 with the control.\'94\
+\'93The primary outcome in this trial at both interim and final analyses is the binary (composite) outcome of PPH-related maternal mortality or invasive surgical procedures (MMS) up to 3 days postpartum.\'94\
+\
+- MRC OCTOPUS trial - Multiple sclerosis - stage 1 outcome: brain atrophy rate; stage 2 outcome: time to disability progression\
+\
+	- \ul ROSSINI 2 trial \ulnone - surgery -\cf2  \cb3 \outl0\strokewidth0 \strokec4 primary outcome measure: surgery site infection (SSI) rate / detecting risk reduction %\
+- primary outcome (SSI) is measured within 30 days of surgery; good for MAMS design because this primary outcome result is available within a short timeframe - can be used in early interim analyses to expedite progress of the trial\
+- \cf0 \cb1 \strokec2 a conservative control group SSI rate of 15% was selected to account for the increasing use of minimal access operative techniques across the study population (page 79)\
+- At each interim analysis, we have planned that at least two research arms will not randomise any further patients. Therefore, the maximum number of research arms in the trial will reduce from 7 to at most 5 after the first interim analysis, and subsequently to a maximum of 3 after the second interim analysis. The first interim analysis is planned once approximately 2350 patients have joined the trial and the second interim analysis is planned when approximately 4630 patients have been recruited. Given this design, it is anticipated that approximately 6610 patients will be entered into the trial.
+\f0\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
+\
+\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\
+Definitions of power:\
+
+\f1\b0 - RED trial - Choodari-Oskooei et al (2023) : \'93\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 overall power is defined as the probability that the most effective arm is selected at the interim analysis and the primary null hypothesis is rejected for this arm at the final analysis\'94\
+	- because RED trial has two stages - only one out of the three treatments is selected to continue to stage two \kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
+	- \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 Probability of correct selection: \'93The probability of correct selection is the probability the most effective arm is selected at an interim stage\'94 \
+\
+- Magirr et al (2012): \'93the probability that [\'85] H1 is rejected and treatment 1 recommended given that delta_1 = delta and delta_k = delta_0\'94 i.e. least favourable configuration
+\f0\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
+\
+\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\
+R packages\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f1\b0 \cf0 \ul \ulc0 stoppingrule\ulnone  https://cran.r-project.org/web/packages/stoppingrule/stoppingrule.pdf\
+\pard\pardeftab720\partightenfactor0
+\cf0 \expnd0\expndtw0\kerning0
+The method used for constructing the stopping rule. Choices include a Pocock test ("Pocock"), an O\'92Brien-Fleming test ("OBF"), a Wang-Tsiatis test ("WT"), the Bayesian beta-binomial method ("BB") proposed by Geller et al. 2003, the Bayesian beta-binomial method ("CC") proposed by Chen and Chaloner 2006, a truncated SPRT ("SPRT"), and a maximized SPRT ("MaxSPRT").\
+- no triangular option\
+\
+\ul gsDesign \cf2 \cb5 \ulc2 \
+\pard\pardeftab720\partightenfactor0
+\cf2 \ulnone A spending function or a character string indicating a boundary type (that is, \'93WT\'94 for Wang-Tsiatis bounds, \'93OF\'94 for O'Brien-Fleming bounds and \'93Pocock\'94 for Pocock bounds). For one-sided and symmetric two-sided testing is used to completely specify spending (
+\f3 test.type=1, 2
+\f1 ),\'a0
+\f3 sfu
+\f1 . The default value is\'a0
+\f3 sfHSD
+\f1 \'a0which is a Hwang-Shih-DeCani spending function. See details,\'a0
+\f3 vignette("SpendingFunctionOverview")
+\f1 , manual and examples.\
+- no triangular option\
+\
+\ul mams\ulnone  https://eprints.lancs.ac.uk/id/eprint/125841/1/JSS2434.pdf\
+stopping boundaries: accepts pocock, obf, triangular, and self-defined stopping boundaries\ul \
+\pard\pardeftab720\partightenfactor0
+\cf0 \cb1 \ulnone \
+
+\f4 \
+
+\f1 \kerning1\expnd0\expndtw0 \
+}

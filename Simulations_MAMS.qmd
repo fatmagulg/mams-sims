@@ -6,7 +6,7 @@ editor: visual
 
 # Multi-Arm Multi-Stage Trial Simulation
 
-another test
+another tests
 
 ```{r}
 library(ldbounds)
@@ -537,8 +537,6 @@ mams_ef <- function(l, u, sd = 1, n, mu, r = 1, silent = TRUE){
       
       end_stage <- j
       
-      #total_N <- total_N + n[j]*K + n[j]*r
-      
       return(list(stopped_stage = j,
                   effective_treatment = NA,
                   Z_values = round(Z,2), 
@@ -616,11 +614,11 @@ mams_replicates2 <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
 LFC <- c(0, 0.545,0.178,0.178, 0.178)
 HG <- c(rep(0,5))
 mams_ef(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG, silent = FALSE)
-#size <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG)$results
+size <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG)$results
 
-#plot(density(size$total_N), main = "Density of ESS", xlab = "Total (Running) Sample Size")
-#abline(v = mean(size$total_N), col = "red", lty = 2)
-#abline(v = 450, col = 'blue')
+plot(density(size$total_N), main = "Density of sample size", xlab = "Total (Running) Sample Size")
+abline(v = mean(size$total_N), col = "red", lty = 2)
+abline(v = 450, col = 'blue')
 ```
 
 ```{r}
@@ -711,6 +709,11 @@ results
 ```
 
 ```{r}
+plot(x = seq(1, 4), y = c(4.375, 3.094, 2.526, 2.188), type = 'b', ylim = c(-1, 5))
+lines(x = seq(1, 4), y = c(0, 0, 0, 2.1875), type = 'b')
+```
+
+```{r}
 set.seed(123)
 boot_means <- replicate(1000, mean(sample(size$total_N, replace = TRUE)))
 
@@ -774,6 +777,51 @@ Phase 3:
 -   Power = 0.9
 
 -   $\delta$ = 0.16
+
+### Application to ROSSINI-2 trial
+
+• 4 stages (including internal pilot) - 2 interim + 1 final analysis (3 stages excluding pilot)
+
+• SSI of the control group is assumed to be 15%
+
+Actual trial places restrictions on how many arms can progress after each interim (pre-specified MAMS design) - for the purposes of this project this restriction will be lifted and the trial will be considered a full MAMS design
+
+```{r}
+n = c(30,30,30)#c(261, 326, 396)
+ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
+```
+
+```{r}
+LFC <- c(0, 0.545,0.178,0.178, 0.178)
+HG <- c(rep(0,5))
+Mu <- cbind(HG, LFC)
+
+twostage <- mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), Mu = Mu)
+
+threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), Mu = Mu)
+
+fourstage <- mams_hyp(l = c(0, 0, 0, 2.1875), u = c(4.375, 3.094, 2.526, 2.188), n = rep(24,4), Mu = Mu)
+
+results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
+rownames(results) <- c("2stage", "3stage", "4stage")
+
+type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+
+results
+
+
+wj_bounds <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), mu = LFC, n = c(261, 326, 396), r = 2)$ESS_trial2
+
+# lan demetz obf boundaries:
+landemetz_obf <- mams_replicates2(l = c(0, 0, 2.154), u = c(3.9849, 2.7108, 2.154), mu = c(0.15, 0.1, 0.1, 0.1), n = c(261, 326, 396), r = 2)$ESS_trial2
+
+rbind(wj_bounds, landemetz_obf)
+
+
+mams_replicates2(l = c(0, 0, 2.1434), u = c(4.5008, 2.8866, 2.1434), mu = c(0,0,0,0), n = c(261, 326, 396), r = 2)$TypeIrate
+
+mams_replicates2(l = c(0, 0, 2.1434), u = c(4.5008, 2.4866, 2.1434), mu = c(0,0.05,0.01,0.01), n = c(rep(315,3)), r = 2)
+```
 
 ## \*Grid search over trial parameters
 
