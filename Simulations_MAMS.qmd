@@ -706,29 +706,31 @@ rownames(results) <- c("2stage", "3stage", "4stage")
 
 type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
 
-results
+result
 ```
 
 ```{r}
-u = c(4.375, 3.094, 2.526, 2.188); l = c(0, 0, 0, 2.1875)
-#l = c(0, 0, 2.182); u = c(3.779, 2.672, 2.182)
+boundary_plotter <- function(l, u){
+  x = seq(1, length(u))
+  ymax = ceiling(u[1])
+  
+  plot(x = x, y = u, type = 'b', ylim = c(-1, ymax), xaxt = 'n',
+       xlab = "Interim analysis", ylab = "Z-statistic", main = "Stopping bounds for TAILoR trial")
+  axis(side = 1, at = x)
+  lines(x = x, y = l, type = 'b')
+  
+  x_eff <- c(x, rev(x))
+  y_eff <- c(u, rep(ymax, length(x)))
+  
+  x_fut <- x_eff
+  y_fut <- c(rep(-1, length(x)), rev(l))
+  
+  polygon(x_eff, y_eff, col = "#6BD7AF80", border = NA, density = 10, angle = 45)
+  polygon(x_fut, y_fut, col = "salmon", border = NA, density = 10, angle = 45)
+}
 
-x = seq(1, length(u))
-ymax = ceiling(u[1])
-
-plot(x = x, y = u, type = 'b', ylim = c(-1, ymax), xaxt = 'n',
-     xlab = "Interim analysis", ylab = "Z-statistic", main = "Stopping bounds for TAILoR trial")
-axis(side = 1, at = x)
-lines(x = x, y = l, type = 'b')
-
-x_eff <- c(x, rev(x))
-y_eff <- c(u, rep(ymax, length(x)))
-
-x_fut <- x_eff
-y_fut <- c(rep(-1, length(x)), rev(l))
-
-polygon(x_eff, y_eff, col = "#6BD7AF80", border = NA, density = 10, angle = 45)
-polygon(x_fut, y_fut, col = "salmon", border = NA, density = 10, angle = 45)
+#boundary_plotter(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182))
+boundary_plotter(u = c(4.375, 3.094, 2.526, 2.188), l = c(0, 0, 0, 2.1875))
 ```
 
 ```{r}
