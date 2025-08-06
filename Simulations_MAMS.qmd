@@ -643,7 +643,7 @@ boot_ci_norm <- boot_mean + c(-1.96, 1.96) * boot_se
 `mams_hyp` produces the ESS for different scenarios of the null hypothesis. The function takes the same arguments as `mams_replicates2`, but instead of the mean vector `mu`, a matrix `Mu` whose columns consist of mean vectors for different null hypothesis scenarios must be passed.
 
 ```{r}
-mams_hyp <- function(l, u, n, sd = 1, Mu, nrep = 1000){
+mams_hyp <- function(l, u, n, r = 1, sd = 1, Mu, nrep = 1000){
   
   ESS <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
   interval <- list()
@@ -652,7 +652,7 @@ mams_hyp <- function(l, u, n, sd = 1, Mu, nrep = 1000){
   for(h in 1:ncol(Mu)){
     mu <- Mu[,h]
     
-    reps <- mams_replicates2(l = l, u = u, sd = sd, n = n, mu = mu, nrep = nrep)
+    reps <- mams_replicates2(l = l, u = u, n = n, r = r, sd = sd, mu = mu, nrep = nrep)
     
     ESS[h] <- reps$ESS_trial2
     
@@ -706,7 +706,7 @@ rownames(results) <- c("2stage", "3stage", "4stage")
 
 type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
 
-result
+results
 ```
 
 ```{r}
@@ -800,62 +800,31 @@ ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
 ```
 
 ```{r}
-LFC <- c(0, 0.545,0.178,0.178, 0.178)
-HG <- c(rep(0,5))
-Mu <- cbind(HG, LFC)
-
-twostage <- mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), Mu = Mu)
-
-threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), Mu = Mu)
-
-fourstage <- mams_hyp(l = c(0, 0, 0, 2.1875), u = c(4.375, 3.094, 2.526, 2.188), n = rep(24,4), Mu = Mu)
-
-results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
-rownames(results) <- c("2stage", "3stage", "4stage")
-
-type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
-
-results
-
-
-wj_bounds <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), mu = LFC, n = c(261, 326, 396), r = 2)$ESS_trial2
-
-# lan demetz obf boundaries:
-landemetz_obf <- mams_replicates2(l = c(0, 0, 2.154), u = c(3.9849, 2.7108, 2.154), mu = c(0.15, 0.1, 0.1, 0.1), n = c(261, 326, 396), r = 2)$ESS_trial2
-
-rbind(wj_bounds, landemetz_obf)
-
-
-mams_replicates2(l = c(0, 0, 2.1434), u = c(4.5008, 2.8866, 2.1434), mu = c(0.15, 0.1, 0, 0), n = c(470, 456, 396), r = 2, sd = 0.33)
-
-# rossini stages 5-
-mams_replicates2(l = c(0, 0, 2.1543), u = c(3.9849, 2.7108, 2.1543), mu = c(0.15, 0.1, 0, 0), n = c(rep(315,3)), r = 2, sd = 0.33)
-```
-
-```{r}
-HG <- c(0.15, 0.15, 0.15, 0.15)  # All treatments same as control
-LFC <- c(0.15, 0.10, 0.10, 0.10)  # Effect in all treatments
-
 n <- c(470, 456, 396)
 r <- 2
-u <- c(-3.8484, -2.6348, -2.1608)     # futility
-l <- c(3.8484, 2.6348, -2.1608)
-
-res <- mams_replicates2(l = l, u = u, mu = c(0,0,0,0), n = n, sd = 0.33, r = r, nrep = 1000)
-res
-#mams_replicates2(l = c(0, 0, 2.1434), u = c(4.5008, 2.4866, 2.1434), mu = c(0,0.05,0,0), n = c(rep(284,3)), r = 2)
-
-#boundary_plotter(l, u)
-#ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
-```
-
-```{r}
-n <- c(470, 456, 396)
-r <- 2
-l <- c(0, 0, 02.1608)     # futility
+l <- c(0, 0, 02.1608)
 u <- c(3.8484, 2.6348, 2.1608)
 
 mams_replicates2(l = l, u = u, mu = c(0,0.05,0.01,0.01), n = n, sd = 0.33, r = r, nrep = 1000)
+```
+
+```{r}
+LFC <- c(0, 0.05, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)
+HG <- c(rep(0,8))
+Mu <- cbind(HG, LFC)
+
+#twostage <- mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), r = 2, sd = 0.33, n = rep(42,2), Mu = Mu)
+
+threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), r = 2, sd = 0.33, n = c(261, 253, 220), Mu = Mu)
+
+#fourstage <- mams_hyp(l = c(0, 0, 0, 2.1875), u = c(4.375, 3.094, 2.526, 2.188), n = rep(24,4), Mu = Mu)
+
+results <- threestage$ESS#rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
+#rownames(results) <- c("2stage", "3stage", "4stage")
+
+#type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+
+results
 ```
 
 ## \*Grid search over trial parameters
