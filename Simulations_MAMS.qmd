@@ -236,9 +236,9 @@ mams_alphasp <- function(mu, sd, n, silent = TRUE){
 
 #### Example of calculation of Lan-DeMetz boundaries:
 
-```{r}
-n = c(30,30,30)
-ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
+```{n = c(30,30,30)}
+ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1){r}
+
 ```
 
 ```{r}
@@ -272,7 +272,7 @@ polygon(x_poly, y_poly, col = "#6BD7AF80", border = NA, density = 10, angle = 45
 
 ## Replication function
 
-The replication function replicated `mams_simulator` and returns the following:
+The replication function replicates `mams_simulator` and returns the following:
 
 `resultsdf` : data frame of the result of each trial replicate, with columns `stopped_stage` and `effective_treatment`
 
@@ -710,6 +710,31 @@ results
 ```
 
 ```{r}
+# try with my Lan-DeMetz boundaries
+LFC <- c(0, 0.545,0.178,0.178, 0.178)
+HG <- c(rep(0,5))
+Mu <- cbind(HG, LFC)
+
+twostage <- mams_hyp(l = c(0, 2.2457), u = c(3.3446, 2.2457), n = rep(42,2), Mu = Mu)
+
+threestage <- mams_hyp(l = c(0, 0, 2.2637), u = c(4.1708, 2.8458, 2.2637), n = rep(30,3), Mu = Mu)
+
+fourstage <- mams_hyp(l = c(0, 0, 0, 2.2812), u = c(4.8599, 3.3447, 2.6702, 2.2812), n = rep(24,4), Mu = Mu)
+
+results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
+rownames(results) <- c("2stage", "3stage", "4stage")
+
+type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+
+results
+```
+
+```{r}
+n = rep(24, 4)
+ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
+```
+
+```{r}
 boundary_plotter <- function(l, u){
   x = seq(1, length(u))
   ymax = ceiling(u[1])
@@ -813,11 +838,8 @@ LFC <- c(0, 0.05, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)
 HG <- c(rep(0,8))
 Mu <- cbind(HG, LFC)
 
-#twostage <- mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), r = 2, sd = 0.33, n = rep(42,2), Mu = Mu)
 
 threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), r = 2, sd = 0.33, n = c(261, 253, 220), Mu = Mu)
-
-#fourstage <- mams_hyp(l = c(0, 0, 0, 2.1875), u = c(4.375, 3.094, 2.526, 2.188), n = rep(24,4), Mu = Mu)
 
 results <- threestage$ESS#rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
 #rownames(results) <- c("2stage", "3stage", "4stage")
