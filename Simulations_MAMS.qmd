@@ -786,19 +786,7 @@ axis(side = 1, at = 1:3, labels = c("Two", "Three", "Four"))
 abline(h = 0.05, lty = 2)
 ```
 
-### \*Simulating scenarios for MODULATE trial
-
-The MODULATE trial is a Phase 2 and 3 trial:
-
-Phase 3:
-
--   R = 2
-
--   Power = 0.9
-
--   $\delta$ = 0.16
-
-### Application to ROSSINI-2 trial
+### \*Application to ROSSINI-2 trial
 
 • 4 stages (including internal pilot) - 2 interim + 1 final analysis (3 stages excluding pilot)
 
@@ -807,8 +795,8 @@ Phase 3:
 Actual trial places restrictions on how many arms can progress after each interim (pre-specified MAMS design) - for the purposes of this project this restriction will be lifted and the trial will be considered a full MAMS design
 
 ```{r}
-n = c(30,30,30)#c(261, 326, 396)
-ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
+n = c(rep(315,3))#c(261, 326, 396)
+ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
 ```
 
 ```{r}
@@ -838,9 +826,36 @@ landemetz_obf <- mams_replicates2(l = c(0, 0, 2.154), u = c(3.9849, 2.7108, 2.15
 rbind(wj_bounds, landemetz_obf)
 
 
-mams_replicates2(l = c(0, 0, 2.1434), u = c(4.5008, 2.8866, 2.1434), mu = c(0,0,0,0), n = c(261, 326, 396), r = 2)$TypeIrate
+mams_replicates2(l = c(0, 0, 2.1434), u = c(4.5008, 2.8866, 2.1434), mu = c(0.15, 0.1, 0, 0), n = c(470, 456, 396), r = 2, sd = 0.33)
 
-mams_replicates2(l = c(0, 0, 2.1434), u = c(4.5008, 2.4866, 2.1434), mu = c(0,0.05,0.01,0.01), n = c(rep(315,3)), r = 2)
+# rossini stages 5-
+mams_replicates2(l = c(0, 0, 2.1543), u = c(3.9849, 2.7108, 2.1543), mu = c(0.15, 0.1, 0, 0), n = c(rep(315,3)), r = 2, sd = 0.33)
+```
+
+```{r}
+HG <- c(0.15, 0.15, 0.15, 0.15)  # All treatments same as control
+LFC <- c(0.15, 0.10, 0.10, 0.10)  # Effect in all treatments
+
+n <- c(470, 456, 396)
+r <- 2
+u <- c(-3.8484, -2.6348, -2.1608)     # futility
+l <- c(3.8484, 2.6348, -2.1608)
+
+res <- mams_replicates2(l = l, u = u, mu = c(0,0,0,0), n = n, sd = 0.33, r = r, nrep = 1000)
+res
+#mams_replicates2(l = c(0, 0, 2.1434), u = c(4.5008, 2.4866, 2.1434), mu = c(0,0.05,0,0), n = c(rep(284,3)), r = 2)
+
+#boundary_plotter(l, u)
+#ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
+```
+
+```{r}
+n <- c(470, 456, 396)
+r <- 2
+l <- c(0, 0, 02.1608)     # futility
+u <- c(3.8484, 2.6348, 2.1608)
+
+mams_replicates2(l = l, u = u, mu = c(0,0.05,0.01,0.01), n = n, sd = 0.33, r = r, nrep = 1000)
 ```
 
 ## \*Grid search over trial parameters
