@@ -6,8 +6,6 @@ editor: visual
 
 # Multi-Arm Multi-Stage Trial Simulation
 
-another tests
-
 ```{r}
 library(ldbounds)
 ```
@@ -546,11 +544,36 @@ mams_replicates2 <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
 `mams_hyp` produces the ESS for different scenarios of the null hypothesis. The function takes the same arguments as `mams_replicates2`, but instead of the mean vector `mu`, a matrix `Mu` whose columns consist of mean vectors for different null hypothesis scenarios must be passed.
 
 ```{r}
-mams_hyp <- function(l, u, n, r = 1, sd = 1, Mu, nrep = 1000){
+alpha_bonf = 0.05/5
+n = rep(42,2)
+e_boundaries <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 2, iuse = 1)
+e_boundaries$upper.bounds
+```
+
+```{r}
+mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, nrep = 1000){
   
   ESS <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
   interval <- list()
   TypeI <- NA
+  
+  # compute stopping boundries if none have been inputted by user
+  if(missing(l) && missing(u)){
+    alpha_bonf <- 0.05 / nrow(Mu)
+    if(bounds == 'obf_one'){
+    u <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 1)$upper.bounds
+    l <- rep(0, length(u))
+    }
+    if(bounds == 'obf'){
+    u <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 2, iuse = 1)$upper.bounds
+    l <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 2, iuse = 1)$lower.bounds
+    }
+    if(bounds == 'tri'){
+    
+    }
+  }
+
+  
   
   for(h in 1:ncol(Mu)){
     mu <- Mu[,h]
@@ -571,7 +594,10 @@ mams_hyp <- function(l, u, n, r = 1, sd = 1, Mu, nrep = 1000){
   ESS <- cbind(n[1]*length(n)*nrow(Mu), ESS)
   dimnames(ESS)[[2]][1] <- 'MaxN'
   
-  return(list(ESS = ESS, CI = interval, TypeI = TypeI))
+  return(list(ESS = ESS,
+              #CI = interval, 
+              TypeI = TypeI
+              , bounds = list(l, u)))
 }
 ```
 
@@ -580,7 +606,9 @@ LFC <- c(0, 0.545,0.178,0.178, 0.178)
 HG <- c(rep(0,5))
 Mu <- cbind(HG, LFC)
 
+
 mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), Mu = Mu)
+mams_hyp(bounds = 'obf', n = rep(42,2), Mu = Mu )
 ```
 
 ### Reproducing results from Wason & Jaki (2011) - TAILoR trial
@@ -633,8 +661,25 @@ results
 ```
 
 ```{r}
-n = rep(24, 4)
-ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
+# try with my Lan-DeMetz boundaries
+LFC <- c(0, 0.545,0.178,0.178, 0.178)
+HG <- c(rep(0,5))
+Mu <- cbind(HG, LFC)
+
+twostage <- mams_hyp(bounds = 'obf_one', n = rep(42,2), Mu = Mu)
+
+threestage <- mams_hyp(bounds = 'obf_one', n = rep(30,3), Mu = Mu)
+
+fourstage <- mams_hyp(bounds = 'obf_one', n = rep(24,4), Mu = Mu)
+
+results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
+rownames(results) <- c("2stage", "3stage", "4stage")
+
+type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+
+results
+
+boundary_plotter(l = threestage$bounds[[1]], u = threestage$bounds[[2]])
 ```
 
 ```{r}
