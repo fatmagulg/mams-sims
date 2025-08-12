@@ -611,33 +611,6 @@ mams_replicates2 <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
 }
 ```
 
-```{r}
-LFC <- c(0, 0.545,0.178,0.178, 0.178)
-HG <- c(rep(0,5))
-mams_ef(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG, silent = FALSE)
-size <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = HG)$results
-
-plot(density(size$total_N), main = "Density of sample size", xlab = "Total (Running) Sample Size")
-abline(v = mean(size$total_N), col = "red", lty = 2)
-abline(v = 450, col = 'blue')
-```
-
-```{r}
-set.seed(123)
-boot_means <- replicate(1000, mean(sample(size$total_N, replace = TRUE)))
-
-# Bootstrap percentile interval
-quantiles <- quantile(boot_means, probs = c(0.025, 0.975))
-
-plot(density(size$total_N), main = "Density of ESS", xlab = "Total Sample Size")
-abline(v = mean(size$total_N), col = "red", lty = 2)
-abline(v = quantiles[[1]], col = 'blue') ; abline(v = quantiles[[2]], col = 'blue') 
-
-boot_se <- sd(boot_means)
-boot_mean <- mean(boot_means)
-boot_ci_norm <- boot_mean + c(-1.96, 1.96) * boot_se
-```
-
 ## Scenario function
 
 `mams_hyp` produces the ESS for different scenarios of the null hypothesis. The function takes the same arguments as `mams_replicates2`, but instead of the mean vector `mu`, a matrix `Mu` whose columns consist of mean vectors for different null hypothesis scenarios must be passed.
