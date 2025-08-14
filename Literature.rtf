@@ -2,9 +2,11 @@
 \cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica-Bold;\f1\fswiss\fcharset0 Helvetica;\f2\fswiss\fcharset0 Helvetica-Oblique;
 \f3\fnil\fcharset0 .AppleSystemUIFontMonospaced-Regular;\f4\froman\fcharset0 Times-Roman;}
 {\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red0\green0\blue0;\red255\green255\blue255;
-\red59\green59\blue59;\red42\green49\blue64;\red14\green18\blue29;}
+\red67\green67\blue67;\red35\green35\blue35;\red59\green59\blue59;\red42\green49\blue64;\red14\green18\blue29;
+}
 {\*\expandedcolortbl;;\cssrgb\c0\c0\c0;\csgray\c0\c0;\cssrgb\c100000\c100000\c100000;
-\cssrgb\c29804\c29804\c29804;\cssrgb\c21569\c25490\c31765;\cssrgb\c6667\c9412\c15294;}
+\cssrgb\c33333\c33333\c33333;\cssrgb\c18039\c18039\c18039;\cssrgb\c29804\c29804\c29804;\cssrgb\c21569\c25490\c31765;\cssrgb\c6667\c9412\c15294;
+}
 \paperw11900\paperh16840\margl1440\margr1440\vieww28300\viewh14200\viewkind0
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ri-11301\sl288\slmult1\pardirnatural\partightenfactor0
 
@@ -32,7 +34,8 @@
 - worst-case scenario treatment effect: delta-tilde, value of delta which gives the highest expected sample size for a particular design \
 - ESS is a function of the probabilities of the trial stopping at each interim and n1 (group size per stage - group sizes are fixed so all ni are equal - defined in 2.1)\
 	- ESS defined in terms of integrals between the stopping boundaries\
-- optimal design: feasible design with lowest max ESS at a particular treatment effect delta. 
+- optimal design: feasible design with lowest max ESS at a particular treatment effect delta. \
+- adjustments and approaches for unknown variance
 \f0\b \
 \
 	Wason & Jaki, 2011, Optimal design of multi-arm multi-stage trials\
@@ -151,25 +154,64 @@
 
 \f1\b0 - allocation ratio: fixed-sample (one-stage) multi-arm trial - optimal allocation ratio = sqrt(K)\
 	- allocating more to the experimental arms during the selection stage decreases uncertainty of the estimated treatment effect; increases probability of correct selection and power of the trial \
-- what point in the trial is best to select the treatment that will progress to the next stage (i.e what % of information time) - their results suggest that 17% information time gives the lowest 
-\f0\b \
+- what point in the trial is best to select the treatment that will progress to the next stage (i.e what % of information time) - their results suggest that 17% information time gives the lowest \
+\
+	
+\f0\b Whitehead, 2010, \cf2 \cb4 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec5 Group sequential trials revisited: Simple implementation using SAS\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f1\b0 \cf2 - clear(er) explanation of how to calculate triangular stopping boundaries \
+- adaptation for normally distributed outcome variable\
+- uses l = u for the final interim analysis to \'91force\'92 a stop for the end of the trial \
+\
+	
+\f0\b Pocock, 1992, When to stop a clinical trial
+\f1\b0 \
+- \'93\cf0 \cb1 \strokec2 One criticism of rules like O'Brien and Fleming is their rigidity in requiring a fixed maximum number of preplanned interim analyses.\'94\
+- \'93Another flexible approach by Lan and DeMets requires pre-specification of the rate at which the type I error is used up as the trial accumulates data,2' and from this we can work out p values for stopping at any choice of analysis times.\'94\
+\
+	
+\f0\b Pocock & White, 1999, Trials stopped early: too good to be true?
+\f1\b0 \
+- \cf2 \'93\cb4 \strokec6 The stopping rule used by Lau and colleagues is commonly called a \'93Pocock boundary\'94, but Pocock does not advocate this cut-off for stopping a trial early because of benefit: pvalues near 0\'b705 are simply not persuasive enough to make a new treatment widely accepted\'94\
+- citation for explaining why Pocock boundaries are not great, too likely to stop early.\
+\
+	
+\f0\b Whitehead, 1997, The Design and Analysis of Sequential Clinical Trials\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f1\b0 \cf2 Section 4.4 - The Triangular Test\
+- \'93The plot of Z (B) against V is called the sample path and is updated at each inspection of the data\
+\
+	
+\f0\b Choodari-Ooskoei et al, 2024, \cf0 \cb1 \strokec2 Multi\uc0\u8209 arm multi\u8209 stage (MAMS) randomised selection designs: impact of\'a0treatment selection rules on\'a0the\'a0operating characteristics
+\f1\b0 \cf2 \cb4 \strokec6 \
+-\cf0 \cb1 \strokec2 We use simulations to calculate the overall power when one research arm has the target effect size and the other arms have a null effect (i.e. the remaining arms were ineffective). In this case the overall power is defined as the probability that the effective research arm is chosen at the interim selection stages and the primary null hypothesis at final stage is rejected for the comparison of that research arm against the control.\
+-Furthermore, we calculate the power to identify any effective research arm (any-pair power) under different configurations of treatment effects and effect sizes [\'85]. Any-pair (or disjunctive) power is the probability that at least one null hypothesis is (correctly) rejected for effective research arms at the final stage.\cf2 \cb4 \strokec5 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
+
+\f0\b \cf0 \cb1 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
 \
 \'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\
 Trial case studies:\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\sl288\slmult1\pardirnatural\partightenfactor0
 
-\f1\b0 - Kim & DeMetz (1992) Thrombolytic Intervention in Myocardial Infarction Trial - binary outcome \
+\f1\b0 \cf0 - Kim & DeMetz (1992) Thrombolytic Intervention in Myocardial Infarction Trial - binary outcome \
 \
 - Choodari-Oskooei et al (2023) RED (postpartum haemorrhage) - binary outcome\
 - \'93\expnd0\expndtw0\kerning0
 phase III randomised clinical trial that uses the MAMS selection design investigating the efficacy of three different tamponade devices (the Ellavi fixed-volume uterine balloon tamponade (UBT), the Ellavi free-flow UBT, and the Suction Tube Uterine Tamponade (STUT) device) against the control device, the Foley catheter. The trial starts with randomisation at equal allocation ratio to three research arms and a control. One research arm is selected at stage 1 to continue to stage 2 with the control.\'94\
 \'93The primary outcome in this trial at both interim and final analyses is the binary (composite) outcome of PPH-related maternal mortality or invasive surgical procedures (MMS) up to 3 days postpartum.\'94\
+- pre-specified treatment selection\
 \
 - MRC OCTOPUS trial - Multiple sclerosis - stage 1 outcome: brain atrophy rate; stage 2 outcome: time to disability progression\
 \
-	- \ul ROSSINI 2 trial \ulnone - surgery -\cf2  \cb4 \outl0\strokewidth0 \strokec5 primary outcome measure: surgery site infection (SSI) rate / detecting risk reduction %\
+	- \ul ROSSINI 2 trial \ulnone - surgery -\cf2  \cb4 \outl0\strokewidth0 \strokec7 primary outcome measure: surgery site infection (SSI) rate / detecting risk reduction %\
 - primary outcome (SSI) is measured within 30 days of surgery; good for MAMS design because this primary outcome result is available within a short timeframe - can be used in early interim analyses to expedite progress of the trial\
 - \cf0 \cb1 \strokec2 a conservative control group SSI rate of 15% was selected to account for the increasing use of minimal access operative techniques across the study population (page 79)\
-- At each interim analysis, we have planned that at least two research arms will not randomise any further patients. Therefore, the maximum number of research arms in the trial will reduce from 7 to at most 5 after the first interim analysis, and subsequently to a maximum of 3 after the second interim analysis. The first interim analysis is planned once approximately 2350 patients have joined the trial and the second interim analysis is planned when approximately 4630 patients have been recruited. Given this design, it is anticipated that approximately 6610 patients will be entered into the trial.
+- At each interim analysis, we have planned that at least two research arms will not randomise any further patients. Therefore, the maximum number of research arms in the trial will reduce from 7 to at most 5 after the first interim analysis, and subsequently to a maximum of 3 after the second interim analysis. The first interim analysis is planned once approximately 2350 patients have joined the trial and the second interim analysis is planned when approximately 4630 patients have been recruited. Given this design, it is anticipated that approximately 6610 patients will be entered into the trial.\
+- \'93We propose to randomise more patients to the control arm than research arms to maximise the power for each pairwise comparison\'94 p82
 \f0\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
 \
 \'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\
@@ -181,8 +223,10 @@ Definitions of power:\
 	- \expnd0\expndtw0\kerning0
 \outl0\strokewidth0 \strokec2 Probability of correct selection: \'93The probability of correct selection is the probability the most effective arm is selected at an interim stage\'94 \
 \
-- Magirr et al (2012): \'93the probability that [\'85] H1 is rejected and treatment 1 recommended given that delta_1 = delta and delta_k = delta_0\'94 i.e. least favourable configuration
-\f0\b \kerning1\expnd0\expndtw0 \outl0\strokewidth0 \
+- Magirr et al (2012): \'93the probability that [\'85] H1 is rejected and treatment 1 recommended given that delta_1 = delta and delta_k = delta_0\'94 i.e. least favourable configuration\
+\
+- Choodari-Ooskoei et al (2024): \outl0\strokewidth0 Any-pair (or disjunctive) power is the probability that at least one null hypothesis is (correctly) rejected for effective research arms at the final stage.
+\f0\b \kerning1\expnd0\expndtw0 \
 \
 \'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\
 R packages\
