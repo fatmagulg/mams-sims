@@ -566,7 +566,7 @@ mams_replicates2 <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
   ESS_trial <- ESS_arm * length(mu)
   
   # calculate ESS using total_N from sim function mams_ef
-  ESS_trial2 <- mean(resultsdf$total_N)
+  ESS_trial2 <- round(mean(resultsdf$total_N), 1)
   
   if(all(mu == 0)){
     TypeI <- mean(!is.na(resultsdf$effective_treatment))}
@@ -629,6 +629,7 @@ e_boundaries$upper.bounds
 mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nrep = 1000){
   
   ESS <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
+  PES <- list()
   interval <- list()
   TypeI <- NA
   anypair_power <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
@@ -658,7 +659,7 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nr
     reps <- mams_replicates2(l = l, u = u, n = n, r = r, sd = sd, mu = mu, nrep = nrep)
     
     #
-    PES <- reps$early_stop_prob
+    PES[[h]] <- reps$early_stop_prob
     
     #ESS
     ESS[h] <- reps$ESS_trial2
@@ -685,7 +686,9 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nr
     
   }
   
-  ESS <- cbind(n[1]*length(n)*nrow(Mu), ESS)
+  #maxN <- n[1]*length(n)*nrow(Mu)
+  maxN <- sum(n)*nrow(Mu)
+  ESS <- cbind(maxN, ESS)
   dimnames(ESS)[[2]][1] <- 'MaxN'
   
   return(list(ESS = ESS,
@@ -874,12 +877,9 @@ n <- c(402,452,1033)
 #n = c(261, 253, 220)
 n = c(201, 226, 517)
 
-threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), r = 2, sd = 0.33, n = n, Mu = Mu)
+threestage <- mams_hyp(bounds = 'obf', r = 2, sd = 0.33, n = n, Mu = Mu)
 
-results <- threestage$ESS#rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
-#rownames(results) <- c("2stage", "3stage", "4stage")
-
-#type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+results <- threestage$ESS
 
 results
 ```
@@ -887,17 +887,15 @@ results
 ```{r}
 LFC <- c(0, 0.05, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)
 HG <- c(rep(0,8))
-alt <- c(0, 0.05, 0.051, 0.05, 0.01, 0.01, 0.01, 0.01)
-Mu <- cbind(HG, LFC, alt)
+multiple <- c(0, 0.05, 0.051, 0.05, 0.01, 0.01, 0.01, 0.01)
+Mu <- cbind(HG, LFC, multiple)
 n <- c(402,452,1033)
 #n = c(261, 253, 220)
 
-threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
+results <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
 
-results <- threestage$ESS
-#results
+results
 
-threestage
 ```
 
 ## \*Grid search over trial parameters
