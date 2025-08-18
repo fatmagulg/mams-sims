@@ -482,7 +482,7 @@ mams_ef <- function(l, u, sd = 1, n, mu, r = 1, silent = TRUE){
 }
 ```
 
-### Triangular boundaries 
+### Triangular boundaries
 
 ```{r}
 n = rep(24,4)
@@ -579,9 +579,44 @@ mams_replicates2 <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
 }
 ```
 
+## Power
+
+Power calculator function that takes as its arguments:
+
+• result - the result data frame returned after running mams_replicates
+
+• mu - the true treatment effect vector passed to mams_replicates
+
+• delta_1 - the minimum threshold for the clinically relevant treatment difference
+
+```{r}
+power <- function(result, mu, delta_1, type = "any"){
+  #any-pair power: probability of any effective treatment being recommended
+  
+  # indices of treatments with a relevant treatment effect
+  if(type == "any"){
+    correct <- which(mu >= delta_1)-1
+  }
+  if(type == "LFC"){
+    correct <- which.max(mu) - 1 #### revise this ?
+  }
+  power_a <- mean(!is.na(result$effective_treatment) & 
+         result$effective_treatment %in% correct)
+  
+  return(power_a)
+}
+```
+
+```{r}
+LFC <- c(0, 0.545,0.178,0.178, 0.178)
+results <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = LFC)$results
+
+power_any(results, mu = LFC, delta_1 = 0.5)
+```
+
 ## Scenario function
 
-`mams_hyp` produces the ESS for different scenarios of the null hypothesis. The function takes the same arguments as `mams_replicates2`, but instead of the mean vector `mu`, a matrix `Mu` whose columns consist of mean vectors for different null hypothesis scenarios must be passed.
+`mams_hyp` produces the same return objects for different scenarios of the null hypothesis. The function takes the same arguments as `mams_replicates2`, but instead of the mean vector `mu`, a matrix `Mu` whose columns consist of mean vectors for different null hypothesis scenarios must be passed.
 
 ```{r}
 alpha_bonf = 0.05/5
@@ -591,11 +626,13 @@ e_boundaries$upper.bounds
 ```
 
 ```{r}
-mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, nrep = 1000){
+mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nrep = 1000){
   
   ESS <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
   interval <- list()
   TypeI <- NA
+  anypair_power <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
+  lfc_power <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
   
   # compute stopping boundries if none have been inputted by user
   if(missing(l) && missing(u)){
@@ -620,23 +657,43 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, nrep = 1000
     
     reps <- mams_replicates2(l = l, u = u, n = n, r = r, sd = sd, mu = mu, nrep = nrep)
     
+    #
+    PES <- reps$early_stop_prob
+    
+    #ESS
     ESS[h] <- reps$ESS_trial2
     
+    #CI
     boot_means <- replicate(1000, mean(sample(reps$results$total_N, replace = TRUE)))
     quantiles <- quantile(boot_means, probs = c(0.025, 0.975))
     interval[[h]] <- quantiles
     
+    #Type I
     if(all(mu == 0)){
       TypeI <- reps$TypeIrate
     }
+    
+    #Power
+    if(missing(delta_1)){
+      anypair_power[h] <- NA
+      lfc_power[h] <- NA
+    }
+    else{
+      anypair_power[h] <- power(reps$results, mu = mu, delta_1 = delta_1, type = 'any')
+      lfc_power[h] <- power(reps$results, mu = mu, delta_1 = delta_1, type = 'LFC')
+    }
+    
   }
   
   ESS <- cbind(n[1]*length(n)*nrow(Mu), ESS)
   dimnames(ESS)[[2]][1] <- 'MaxN'
   
   return(list(ESS = ESS,
+              P_early_stop = PES,
               #CI = interval, 
-              TypeI = TypeI
+              TypeI = TypeI, 
+              anypair_power = anypair_power,
+              LFC_power = lfc_power
               , bounds = list(l, u)))
 }
 ```
@@ -647,43 +704,32 @@ HG <- c(rep(0,5))
 Mu <- cbind(HG, LFC)
 
 
-mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), Mu = Mu)
-mams_hyp(bounds = 'obf', n = rep(42,2), Mu = Mu )
+#mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), delta_1 = 0.1, Mu = Mu)
+mams_hyp(bounds = 'obf', n = rep(42,2), delta_1 = 0.545, Mu = Mu )
 ```
 
-## Power
-
-Power calculator function that takes as its arguments:
-
-• result - the result data frame returned after running mams_replicates
-
-• mu - the true treatment effect vector passed to mams_replicates
-
-• delta_1 - the minimum threshold for the clinically relevant treatment difference
-
 ```{r}
-power <- function(result, mu, delta_1, type = "any"){
-  #any-pair power: probability of any effective treatment being recommended
+boundary_plotter <- function(l, u){
+  x = seq(1, length(u))
+  ymax = ceiling(u[1])
   
-  # indices of treatments with a relevant treatment effect
-  if(type == "any"){
-    correct <- which(mu > delta_1)-1
-  }
-  if(type == "LFC"){
-    correct <- which.max(mu) - 1 #### revise this
-  }
-  power_a <- mean(!is.na(result$effective_treatment) & 
-         result$effective_treatment %in% correct)
+  plot(x = x, y = u, type = 'b', ylim = c(-1, ymax), xaxt = 'n',
+       xlab = "Interim analysis", ylab = "Z-statistic", main = "Stopping bounds for TAILoR trial")
+  axis(side = 1, at = x)
+  lines(x = x, y = l, type = 'b')
   
-  return(power_a)
+  x_eff <- c(x, rev(x))
+  y_eff <- c(u, rep(ymax, length(x)))
+  
+  x_fut <- x_eff
+  y_fut <- c(rep(-1, length(x)), rev(l))
+  
+  polygon(x_eff, y_eff, col = "#6BD7AF80", border = NA, density = 10, angle = 45)
+  polygon(x_fut, y_fut, col = "salmon", border = NA, density = 10, angle = 45)
 }
-```
 
-```{r}
-LFC <- c(0, 0.545,0.178,0.178, 0.178)
-results <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = LFC)$results
-
-power_any(results, mu = LFC, delta_1 = 0.5)
+boundary_plotter(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182))
+#boundary_plotter(u = c(4.375, 3.094, 2.526, 2.188), l = c(0, 0, 0, 2.1875))
 ```
 
 ### Reproducing results from Wason & Jaki (2011) - TAILoR trial
@@ -758,44 +804,6 @@ boundary_plotter(l = threestage$bounds[[1]], u = threestage$bounds[[2]])
 ```
 
 ```{r}
-boundary_plotter <- function(l, u){
-  x = seq(1, length(u))
-  ymax = ceiling(u[1])
-  
-  plot(x = x, y = u, type = 'b', ylim = c(-1, ymax), xaxt = 'n',
-       xlab = "Interim analysis", ylab = "Z-statistic", main = "Stopping bounds for TAILoR trial")
-  axis(side = 1, at = x)
-  lines(x = x, y = l, type = 'b')
-  
-  x_eff <- c(x, rev(x))
-  y_eff <- c(u, rep(ymax, length(x)))
-  
-  x_fut <- x_eff
-  y_fut <- c(rep(-1, length(x)), rev(l))
-  
-  polygon(x_eff, y_eff, col = "#6BD7AF80", border = NA, density = 10, angle = 45)
-  polygon(x_fut, y_fut, col = "salmon", border = NA, density = 10, angle = 45)
-}
-
-#boundary_plotter(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182))
-boundary_plotter(u = c(4.375, 3.094, 2.526, 2.188), l = c(0, 0, 0, 2.1875))
-```
-
-```{r}
-set.seed(123)
-boot_means <- replicate(1000, mean(sample(size$total_N, replace = TRUE)))
-
-# Bootstrap percentile interval
-quantiles <- quantile(boot_means, probs = c(0.025, 0.975))
-
-plot(density(size$total_N), main = "Density of ESS", xlab = "Total Sample Size")
-abline(v = mean(size$total_N), col = "red", lty = 2)
-abline(v = quantiles[[1]], col = 'blue') ; abline(v = quantiles[[2]], col = 'blue') 
-
-results[,'HG']
-```
-
-```{r}
 colours <- c("darkred", "darkgreen", "navy")
 
 plot(1:ncol(results), results[1,], type = "o", col = colours[1], pch = 16,
@@ -849,7 +857,8 @@ ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
 
 ```{r}
 #n <- c(402,452,1033)
-n = c(261, 253, 220)
+#n = c(261, 253, 220)
+n = c(201, 226, 517)
 r <- 2
 l <- c(0, 0, 02.1608)
 u <- c(3.8484, 2.6348, 2.1608)
@@ -863,6 +872,7 @@ HG <- c(rep(0,8))
 Mu <- cbind(HG, LFC)
 n <- c(402,452,1033)
 #n = c(261, 253, 220)
+n = c(201, 226, 517)
 
 threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), r = 2, sd = 0.33, n = n, Mu = Mu)
 
@@ -872,6 +882,22 @@ results <- threestage$ESS#rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
 #type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
 
 results
+```
+
+```{r}
+LFC <- c(0, 0.05, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)
+HG <- c(rep(0,8))
+alt <- c(0, 0.05, 0.051, 0.05, 0.01, 0.01, 0.01, 0.01)
+Mu <- cbind(HG, LFC, alt)
+n <- c(402,452,1033)
+#n = c(261, 253, 220)
+
+threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
+
+results <- threestage$ESS
+#results
+
+threestage
 ```
 
 ## \*Grid search over trial parameters
