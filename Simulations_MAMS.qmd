@@ -711,13 +711,16 @@ Mu <- cbind(HG, LFC)
 mams_hyp(bounds = 'obf', n = rep(42,2), delta_1 = 0.545, Mu = Mu )
 ```
 
+### Boundary plotter function
+
 ```{r}
 boundary_plotter <- function(l, u){
   x = seq(1, length(u))
   ymax = ceiling(u[1])
+  ymin = floor(l[1])
   
-  plot(x = x, y = u, type = 'b', ylim = c(-1, ymax), xaxt = 'n',
-       xlab = "Interim analysis", ylab = "Z-statistic", main = "Stopping bounds for TAILoR trial")
+  plot(x = x, y = u, type = 'b', ylim = c(ymin, ymax), xaxt = 'n',
+       xlab = "Interim analysis", ylab = "Z-statistic", main = "Stopping bounds")
   axis(side = 1, at = x)
   lines(x = x, y = l, type = 'b')
   
@@ -725,7 +728,7 @@ boundary_plotter <- function(l, u){
   y_eff <- c(u, rep(ymax, length(x)))
   
   x_fut <- x_eff
-  y_fut <- c(rep(-1, length(x)), rev(l))
+  y_fut <- c(rep(ymin, length(x)), rev(l))
   
   polygon(x_eff, y_eff, col = "#6BD7AF80", border = NA, density = 10, angle = 45)
   polygon(x_fut, y_fut, col = "salmon", border = NA, density = 10, angle = 45)
@@ -881,10 +884,13 @@ plot(effects, power_est, type = 'l', main = "Power estimates when only one treat
 #n = c(261, 253, 220)
 n = c(201, 226, 517)
 r <- 2
-l <- c(0, 0, 02.1608)
+l <- c(0, 0, 2.1608)
 u <- c(3.8484, 2.6348, 2.1608)
+mu = matrix(data = c(0, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03), ncol = 1)
 
-mams_replicates2(l = l, u = u, mu = c(0,0.05,0.01,0.01), n = n, sd = 0.3, r = r, nrep = 1000)
+mams_hyp(l = l, u = u, Mu = mu, n = n, sd = 0.3, r = r, delta_1 = 0.05)
+
+boundary_plotter(l, u)
 ```
 
 ```{r}
@@ -899,9 +905,7 @@ n = c(201, 226, 517)
 results <- mams_hyp(bounds = 'obf', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
 
 results
-sum(n)*nrow(Mu)
-
-sum(n)*((nrow(Mu)-1) + r)
+boundary_plotter(results$bounds[[1]], results$bounds[[2]])
 ```
 
 ## \*Grid search over trial parameters
