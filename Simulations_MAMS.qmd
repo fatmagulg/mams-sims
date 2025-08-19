@@ -599,6 +599,9 @@ power <- function(result, mu, delta_1, type = "any"){
   }
   if(type == "LFC"){
     correct <- which.max(mu) - 1 #### revise this ?
+    
+    #max_mu <- max(mu)
+    #correct <- which(mu == max_mu) - 1 # this isnt really the LFC
   }
   power_a <- mean(!is.na(result$effective_treatment) & 
          result$effective_treatment %in% correct)
@@ -863,15 +866,18 @@ ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
 
 ```{r}
 effects <- seq(0, 0.1, 0.01) #c(0.2,0.3,0.4,0.5)
-n <- c(30,30,30)
+n <- c(201, 226, 517)
 power_est <- numeric(length = length(effects))
 
+l <- c(0, 0, 2.1608)
+u <- c(3.8484, 2.6348, 2.1608)
+
 for(i in 1:length(effects)){
-  mu = c(0,effects[i],0.1,0.1) # only treatment 1 is effective
+  mu = c(0,effects[i],0,0,0,0,0,0) # only treatment 1 is effective
   
-  res <- mams_replicates(mu = mu, sd = 1, n = n, nrep = 1000)
+  res <- mams_replicates2(l = l, u = u, mu = mu, sd = 0.3, n = n, nrep = 1000)
   
-  power_est[i] <- nrow(res$results[res$results$effective_treatment == 2,])/1000
+  power_est[i] <- nrow(res$results[res$resultsdf$effective_treatment == 1,])/1000
 }
 
 power_est
@@ -884,19 +890,16 @@ plot(effects, power_est, type = 'l', main = "Power estimates when only one treat
 #n = c(261, 253, 220)
 n = c(201, 226, 517)
 r <- 2
-l <- c(0, 0, 2.1608)
-u <- c(3.8484, 2.6348, 2.1608)
+c
 mu = matrix(data = c(0, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03), ncol = 1)
 
 mams_hyp(l = l, u = u, Mu = mu, n = n, sd = 0.3, r = r, delta_1 = 0.05)
-
-boundary_plotter(l, u)
 ```
 
 ```{r}
 LFC <- c(0, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03)
 HG <- c(rep(0,8))
-multiple <- c(0, 0.05, 0.051, 0.05, 0.01, 0.01, 0.01, 0.01)
+multiple <- c(0, 0.05, 0.05, 0.05, 0.01, 0.01, 0.01, 0.01)
 Mu <- cbind(HG, LFC, multiple)
 #n <- c(402,452,1033)
 #n = c(261, 253, 220)
@@ -905,7 +908,7 @@ n = c(201, 226, 517)
 results <- mams_hyp(bounds = 'obf', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
 
 results
-boundary_plotter(results$bounds[[1]], results$bounds[[2]])
+#boundary_plotter(results$bounds[[1]], results$bounds[[2]])
 ```
 
 ## \*Grid search over trial parameters
