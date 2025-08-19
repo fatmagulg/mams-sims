@@ -687,7 +687,7 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nr
   }
   
   #maxN <- n[1]*length(n)*nrow(Mu)
-  maxN <- sum(n)*nrow(Mu)
+  maxN <- sum(n)*((nrow(Mu)-1) + r) # sum(n)*nrow(Mu)
   ESS <- cbind(maxN, ESS)
   dimnames(ESS)[[2]][1] <- 'MaxN'
   
@@ -859,6 +859,24 @@ ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
 ```
 
 ```{r}
+effects <- seq(0, 0.1, 0.01) #c(0.2,0.3,0.4,0.5)
+n <- c(30,30,30)
+power_est <- numeric(length = length(effects))
+
+for(i in 1:length(effects)){
+  mu = c(0,effects[i],0.1,0.1) # only treatment 1 is effective
+  
+  res <- mams_replicates(mu = mu, sd = 1, n = n, nrep = 1000)
+  
+  power_est[i] <- nrow(res$results[res$results$effective_treatment == 2,])/1000
+}
+
+power_est
+
+plot(effects, power_est, type = 'l', main = "Power estimates when only one treatment is effective",  xlab = "True effect size of treatment 1")
+```
+
+```{r}
 #n <- c(402,452,1033)
 #n = c(261, 253, 220)
 n = c(201, 226, 517)
@@ -866,36 +884,24 @@ r <- 2
 l <- c(0, 0, 02.1608)
 u <- c(3.8484, 2.6348, 2.1608)
 
-mams_replicates2(l = l, u = u, mu = c(0,0.05,0.01,0.01), n = n, sd = 0.33, r = r, nrep = 1000)
+mams_replicates2(l = l, u = u, mu = c(0,0.05,0.01,0.01), n = n, sd = 0.3, r = r, nrep = 1000)
 ```
 
 ```{r}
-LFC <- c(0, 0.05, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)
-HG <- c(rep(0,8))
-Mu <- cbind(HG, LFC)
-n <- c(402,452,1033)
-#n = c(261, 253, 220)
-n = c(201, 226, 517)
-
-threestage <- mams_hyp(bounds = 'obf', r = 2, sd = 0.33, n = n, Mu = Mu)
-
-results <- threestage$ESS
-
-results
-```
-
-```{r}
-LFC <- c(0, 0.05, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)
+LFC <- c(0, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03)
 HG <- c(rep(0,8))
 multiple <- c(0, 0.05, 0.051, 0.05, 0.01, 0.01, 0.01, 0.01)
 Mu <- cbind(HG, LFC, multiple)
-n <- c(402,452,1033)
+#n <- c(402,452,1033)
 #n = c(261, 253, 220)
+n = c(201, 226, 517)
 
-results <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
+results <- mams_hyp(bounds = 'obf', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
 
 results
+sum(n)*nrow(Mu)
 
+sum(n)*((nrow(Mu)-1) + r)
 ```
 
 ## \*Grid search over trial parameters
