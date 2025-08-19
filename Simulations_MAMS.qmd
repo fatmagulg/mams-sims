@@ -860,8 +860,8 @@ abline(h = 0.05, lty = 2)
 Actual trial places restrictions on how many arms can progress after each interim (pre-specified MAMS design) - for the purposes of this project this restriction will be lifted and the trial will be considered a full MAMS design
 
 ```{r}
-n = c(rep(315,3))#c(261, 326, 396)
-ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
+n <- c(201, 226, 517)
+ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/7 , sides = 1, iuse = 1)
 ```
 
 ```{r}
@@ -869,21 +869,21 @@ effects <- seq(0, 0.1, 0.01) #c(0.2,0.3,0.4,0.5)
 n <- c(201, 226, 517)
 power_est <- numeric(length = length(effects))
 
-l <- c(0, 0, 2.1608)
-u <- c(3.8484, 2.6348, 2.1608)
+l <- c(0, 0, 5.7131)
+u <- c(2.4511, 3.8330, 5.7131)
 
 
 for(i in 1:length(effects)){
-  mu = c(0,effects[i],0,0,0,0,0,0) # only treatment 1 is effective
+  mu = c(0, 0.05, rep(effects[i],6)) # treatment 1 ihas target diff, others have delta_0
   
   res <- mams_replicates2(l = l, u = u, mu = mu, sd = 0.3, n = n, nrep = 1000)
   
-  power_est[i] <- nrow(res$results[res$resultsdf$effective_treatment == 1,])/1000
+  power_est[i] <- mean(res$results$effective_treatment == 1, na.rm = TRUE)
 }
 
-power_est
-
-plot(effects, power_est, type = 'l', main = "Power estimates when only one treatment is effective",  xlab = "True effect size of treatment 1")
+plot(effects, power_est, type = 'l', main = "LFC Power for delta1 = 0.05 against delta0 candidates",  xlab = "delta0 candidates")
+abline(h = 0.5, lty = 2, col = 'gray')
+abline(v = 0.03, lty = 2, col = 'gray')
 ```
 
 ```{r}
