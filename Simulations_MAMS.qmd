@@ -641,17 +641,17 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nr
   # compute stopping boundries if none have been inputted by user
   if(missing(l) && missing(u)){
     alpha_bonf <- 0.05 / nrow(Mu)
-    if(bounds == 'obf_one'){
+    if(bounds == 'obf_one'){ #one-sided 
     u <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 1)$upper.bounds
     l <- rep(0, length(u))
+    l[length(l)] <- u[length(u)] # make the last boundary the same for both l and u
     }
     if(bounds == 'obf'){
     u <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 2, iuse = 1)$upper.bounds
     l <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 2, iuse = 1)$lower.bounds
+    l[length(l)] <- u[length(u)]
     }
-    if(bounds == 'tri'){
     
-    }
   }
 
   
@@ -871,6 +871,7 @@ power_est <- numeric(length = length(effects))
 
 l <- c(0, 0, 2.1608)
 u <- c(3.8484, 2.6348, 2.1608)
+
 
 for(i in 1:length(effects)){
   mu = c(0,effects[i],0,0,0,0,0,0) # only treatment 1 is effective
