@@ -721,13 +721,24 @@ mams_hyp(bounds = 'obf', n = rep(42,2), delta_1 = 0.545, Mu = Mu )
 ### Boundary plotter function
 
 ```{r}
-boundary_plotter <- function(l, u){
+boundary_plotter <- function(l, u, ymax = NULL, ymin = NULL, main = NULL){
   x = seq(1, length(u))
-  ymax = ceiling(max(u))
-  ymin = floor(min(l))
+  
+  if(missing(ymax)){
+    ymax = ceiling(max(u))
+    ymin = floor(min(l))
+  }
+  
+  if(missing(ymin)){
+    ymin = floor(min(l))
+  }
+  
+  if(missing(main)){
+    main = "Stopping bounds"
+  }
   
   plot(x = x, y = u, type = 'b', ylim = c(ymin, ymax), xaxt = 'n',
-       xlab = "Interim analysis", ylab = "Z-statistic", main = "Stopping bounds")
+       xlab = "Interim analysis", ylab = "Z-statistic", main = main)
   axis(side = 1, at = x)
   lines(x = x, y = l, type = 'b')
   
@@ -773,10 +784,12 @@ type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
 
 results
 
-boundary_plotter(l = threestage$bounds[[1]], u = threestage$bounds[[2]])
+wj_l <- threestage$bounds[[1]]
+wj_u <- threestage$bounds[[2]]
+boundary_plotter(l = wj_l, u = wj_u)
 ```
 
-Run the same design characteristics through but with OBF-style Lan-DeMetz bounds produces by my function:
+Run the same design characteristics through but with OBF-style Lan-DeMetz bounds produced by my function:
 
 ```{r}
 LFC <- c(0, 0.545,0.178,0.178, 0.178)
@@ -796,7 +809,15 @@ type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
 
 results
 
+my_l <- threestage$bounds[[1]]
+my_u <- threestage$bounds[[2]]
 boundary_plotter(l = threestage$bounds[[1]], u = threestage$bounds[[2]])
+boundary_plotter(l = my_l, u = my_u)
+```
+
+```{r}
+boundary_plotter(l = wj_l, u = wj_u, ymax = ceiling(my_u[1]), main = "Stopping bounds for W&J OBF boundaries")
+boundary_plotter(l = my_l, u = my_u, main = "Stopping bounds for OBF-style Lan-DeMetz boundaries")
 ```
 
 ```{r}
