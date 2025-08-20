@@ -671,11 +671,6 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nr
     #ESS
     ESS[h] <- reps$ESS_trial2
     
-    #CI
-    boot_means <- replicate(1000, mean(sample(reps$results$total_N, replace = TRUE)))
-    quantiles <- quantile(boot_means, probs = c(0.025, 0.975))
-    interval[[h]] <- quantiles
-    
     #Type I
     if(all(mu == 0)){
       TypeI <- reps$TypeIrate
@@ -700,7 +695,6 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nr
   
   return(list(ESS = ESS,
               P_early_stop = PES,
-              #CI = interval, 
               TypeI = TypeI, 
               anypair_power = anypair_power,
               LFC_power = lfc_power
@@ -925,13 +919,66 @@ pocock <- mams_hyp(bounds = 'pocock', r = 2, sd = 0.33, n = n, delta_1 = 0.05, M
 obf_1 <- mams_hyp(bounds = 'obf_one', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
 
 obf_2 <- mams_hyp(bounds = 'obf', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
+```
 
+```{r}
 ESS <- rbind(pocock$ESS, obf_1$ESS, obf_2$ESS)
-rownames(ESS) <- c("one-sided", "two-sided")
+rownames(ESS) <- c("pocock", "one-sided", "two-sided")
 ESS
 
+TypeI <- rbind(pocock$TypeI, obf_1$TypeI, obf_2$TypeI)
+colnames(TypeI) <- c("TypeIrate") ; rownames(TypeI) <-  c("pocock", "one-sided", "two-sided")
+TypeI
+```
 
-#boundary_plotter(results$bounds[[1]], results$bounds[[2]])
+```{r}
+boundary_plotter(pocock$bounds[[1]], pocock$bounds[[2]])
+
+boundary_plotter(obf_1$bounds[[1]], obf_1$bounds[[2]])
+
+boundary_plotter(obf_2$bounds[[1]], obf_2$bounds[[2]])
+```
+
+```{r}
+PES_p <- list(
+  HG       = pocock$P_early_stop[[1]],
+  LFC      = pocock$P_early_stop[[2]],
+  Multiple = pocock$P_early_stop[[3]]
+)
+PES_p <- do.call(cbind, PES_p)
+rownames(PES_p) <- paste0("Stage", 1:3)
+
+PES_1 <- list(
+  HG       = obf_1$P_early_stop[[1]],
+  LFC      = obf_1$P_early_stop[[2]],
+  Multiple = obf_1$P_early_stop[[3]]
+)
+PES_1 <- do.call(cbind, PES_1)
+rownames(PES_1) <- paste0("Stage", 1:3)
+
+PES_2 <- list(
+  HG       = obf_2$P_early_stop[[1]],
+  LFC      = obf_2$P_early_stop[[2]],
+  Multiple = obf_2$P_early_stop[[3]]
+)
+PES_2 <- do.call(cbind, PES_2)
+rownames(PES_2) <- paste0("Stage", 1:3)
+
+barplot(PES_p,
+        beside = TRUE,
+        legend = rownames(PES_p),
+        main = "Stopping probability by scenario",
+        ylab = "Probability")
+barplot(PES_1,
+        beside = TRUE,
+        #main = "",
+        ylab = "Probability")
+barplot(PES_2,
+        beside = TRUE,
+        #main = "",
+        ylab = "Probability")
+
+
 ```
 
 ### Sensitivity analysis
