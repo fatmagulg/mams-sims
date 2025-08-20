@@ -784,8 +784,8 @@ type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
 
 results
 
-wj_l <- threestage$bounds[[1]]
-wj_u <- threestage$bounds[[2]]
+wj_l <- fourstage$bounds[[1]]
+wj_u <- fourstage$bounds[[2]]
 boundary_plotter(l = wj_l, u = wj_u)
 ```
 
@@ -809,15 +809,17 @@ type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
 
 results
 
-my_l <- threestage$bounds[[1]]
-my_u <- threestage$bounds[[2]]
-boundary_plotter(l = threestage$bounds[[1]], u = threestage$bounds[[2]])
+my_l <- fourstage$bounds[[1]]
+my_u <- fourstage$bounds[[2]]
+boundary_plotter(l = fourstage$bounds[[1]], u = fourstage$bounds[[2]])
 boundary_plotter(l = my_l, u = my_u)
 ```
 
 ```{r}
 boundary_plotter(l = wj_l, u = wj_u, ymax = ceiling(my_u[1]), main = "Stopping bounds for W&J OBF boundaries")
 boundary_plotter(l = my_l, u = my_u, main = "Stopping bounds for OBF-style Lan-DeMetz boundaries")
+
+wj_u ; my_u
 ```
 
 ```{r}
@@ -861,7 +863,7 @@ abline(h = 0.05, lty = 2)
 
 # Application to ROSSINI-2 trial
 
-• 4 stages (including internal pilot) - 2 interim + 1 final analysis (3 stages excluding pilot)
+• 3 stages (excluding internal pilot) - 2 interim + 1 final analysis
 
 • SSI of the control group is assumed to be 15%
 
