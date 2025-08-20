@@ -651,7 +651,11 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nr
     l <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 2, iuse = 1)$lower.bounds
     l[length(l)] <- u[length(u)]
     }
-    
+    if(bounds == 'pocock'){
+    u <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 2)$upper.bounds
+    l <- rep(0, length(u))
+    l[length(l)] <- u[length(u)]
+    }
   }
 
   
@@ -846,7 +850,8 @@ Actual trial places restrictions on how many arms can progress after each interi
 
 ```{r}
 n <- c(201, 226, 517)
-ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/7 , sides = 1, iuse = 1)
+b <- ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/7 , sides = 1, iuse = 2)
+boundary_plotter(l = c(0, 0, b$upper.bounds[3]), u= b$upper.bounds)
 ```
 
 ```{r}
@@ -860,7 +865,7 @@ u <- c(2.4511, 3.8330, 5.7131)
 boundary_plotter(l, u)
 
 for(i in 1:length(effects)){
-  mu = c(0, 0.05, rep(effects[i],6)) # treatment 1 ihas target diff, others have delta_0
+  mu = c(0, 0.05, rep(effects[i],6)) # treatment 1 has target diff, others have delta_0
   
   res <- mams_replicates2(l = l, u = u, mu = mu, sd = 0.3, n = n, nrep = 1000)
   
@@ -892,20 +897,23 @@ Mu <- cbind(HG, LFC, multiple)
 #n = c(261, 253, 220)
 n = c(201, 226, 517)
 
+pocock <- mams_hyp(bounds = 'pocock', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
+
 obf_1 <- mams_hyp(bounds = 'obf_one', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
 
 obf_2 <- mams_hyp(bounds = 'obf', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
 
-ESS <- rbind(obf_1$ESS, obf_2$ESS)
+ESS <- rbind(pocock$ESS, obf_1$ESS, obf_2$ESS)
 rownames(ESS) <- c("one-sided", "two-sided")
 ESS
+
 
 #boundary_plotter(results$bounds[[1]], results$bounds[[2]])
 ```
 
 ### Sensitivity analysis
 
-## 
+H
 
 ## \*Grid search over trial parameters
 
