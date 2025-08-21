@@ -872,26 +872,30 @@ boundary_plotter(l = c(0, 0, b$upper.bounds[3]), u= b$upper.bounds)
 ```
 
 ```{r}
-effects <- seq(0, 0.05, 0.005)  #seq(0, 0.1, 0.01) 
+effects <- seq(0, 0.05, 0.005)
 n <- c(201, 226, 517)
 power_est <- numeric(length = length(effects))
 
 l <- c(0, 0, 5.7131)
 u <- c(2.4511, 3.8330, 5.7131)
 
-boundary_plotter(l, u)
+#boundary_plotter(l, u)
 
 for(i in 1:length(effects)){
-  mu = c(0, 0.05, rep(effects[i],6)) # treatment 1 has target diff, others have delta_0
+  mu = c(0, effects[i], rep(0,6)) # treatment 1 has effect delta_0, others have 0 effect
   
   res <- mams_replicates2(l = l, u = u, mu = mu, sd = 0.3, n = n, nrep = 1000)
   
   power_est[i] <- mean(res$results$effective_treatment == 1, na.rm = TRUE)
 }
 
-plot(effects, power_est, type = 'l', main = "LFC Power for delta1 = 0.05 against delta0 candidates",  xlab = "delta0 candidates", ylab = "LFC Power")
+plot(effects, power_est, type = 'l', main = "Power against delta0 candidates",  xlab = "delta0 candidates", ylab = "Power")
 abline(h = 0.5, lty = 2, col = 'gray')
-abline(v = 0.029, lty = 2, col = 'gray')
+abline(v = 0.0195, lty = 2, col = 'gray')
+```
+
+```{r}
+
 ```
 
 ```{r}
