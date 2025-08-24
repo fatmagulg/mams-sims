@@ -164,14 +164,24 @@ mams_alphasp <- function(mu, sd, n, silent = TRUE){
 
 #### Example of calculation of Lan-DeMetz boundaries:
 
-```{n = c(30,30,30)}
-ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1){r}
-
+```{r}
+n = c(30,30,30)
+ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/3 , sides = 1, iuse = 1)
 ```
 
-```{r}
-bounds <- ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
-bounds$upper.bounds
+How $\alpha$-spending functions control the overall Type-I error rate
+
+```{r, warning=FALSE}
+n = c(1, 31,24,46,13) # first sample is 1 so that plot starts at (0,0)
+obf_bounds <- ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 1)
+p_bounds <- ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4 , sides = 1, iuse = 2)
+
+plot(obf_bounds$time, obf_bounds$exit.pr, type = 'o', lty = 3, pch = 16, ylim = c(0, bounds$alpha), 
+     ylab = 'Type I error probability', xlab = 'Information fraction')
+lines(p_bounds$time, p_bounds$exit.pr, type = 'o', lty = 1, pch = 16)
+abline(h = obf_bounds$alpha, lty = 2, col = 'darkblue')
+
+legend('bottomright', legend = c("Overall alpha","Pocock", "O'Brien-Fleming"), lty = c(2,1,3), pch = c(NA, 16, 16), col = c('darkblue', 'black', 'black'), bty = 'n')
 ```
 
 #### Example of a MAMS trial simulation
@@ -610,13 +620,6 @@ power <- function(result, mu, delta_1, type = "any"){
 }
 ```
 
-```{r}
-LFC <- c(0, 0.545,0.178,0.178, 0.178)
-results <- mams_replicates2(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), mu = LFC)$results
-
-power_any(results, mu = LFC, delta_1 = 0.5)
-```
-
 ## Scenario function
 
 `mams_hyp` produces the same return objects for different scenarios of the null hypothesis. The function takes the same arguments as `mams_replicates2`, but instead of the mean vector `mu`, a matrix `Mu` whose columns consist of mean vectors for different null hypothesis scenarios must be passed.
@@ -700,16 +703,6 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nr
               LFC_power = lfc_power
               , bounds = list(l, u)))
 }
-```
-
-```{r}
-LFC <- c(0, 0.545,0.178,0.178, 0.178)
-HG <- c(rep(0,5))
-Mu <- cbind(HG, LFC)
-
-
-#mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), delta_1 = 0.1, Mu = Mu)
-mams_hyp(bounds = 'obf', n = rep(42,2), delta_1 = 0.545, Mu = Mu )
 ```
 
 ### Boundary plotter function
@@ -895,28 +888,21 @@ abline(v = 0.0195, lty = 2, col = 'gray')
 ```
 
 ```{r}
-
-```
-
-```{r}
-#n <- c(402,452,1033)
-#n = c(261, 253, 220)
 n = c(201, 226, 517)
 r <- 2
-c
-mu = matrix(data = c(0, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03), ncol = 1)
+mu = matrix(data = c(0, 0.05, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02), ncol = 1)
 
-mams_hyp(l = l, u = u, Mu = mu, n = n, sd = 0.3, r = r, delta_1 = 0.05)
+mams_hyp(l = l, u = u, Mu = mu, n = n, sd = 0.33, r = r, delta_1 = 0.05)
 ```
 
 ```{r}
-LFC <- c(0, 0.05, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03)
+LFC <- c(0, 0.05, rep(0.02, 6))
 HG <- c(rep(0,8))
 multiple <- c(0, 0.05, 0.04, 0.04, 0, 0, 0, 0)
 Mu <- cbind(HG, LFC, multiple)
-#n <- c(402,452,1033)
-#n = c(261, 253, 220)
+
 n = c(201, 226, 517)
+sum(n)*9
 
 pocock <- mams_hyp(bounds = 'pocock', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
 
@@ -933,6 +919,8 @@ ESS
 TypeI <- rbind(pocock$TypeI, obf_1$TypeI, obf_2$TypeI)
 colnames(TypeI) <- c("TypeIrate") ; rownames(TypeI) <-  c("pocock", "one-sided", "two-sided")
 TypeI
+
+Power <- 
 ```
 
 ```{r}
