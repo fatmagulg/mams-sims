@@ -1,0 +1,572 @@
+---
+title: "Simulations_MAMS"
+format: html
+editor: visual
+---
+
+# Multi-Arm Multi-Stage Trial Simulation
+
+```{r}
+library(ldbounds)
+```
+
+## General MAMS trial simulator function
+
+Define a MAMS trial simulator function that takes three arguments: `mu`, `sd`, and `n`.
+
+`mu`: vector of means for each group, where the first element must correspond to the control group
+
+`sd`: common standard deviation across groups
+
+`n`: vector of per-arm sample sizes at each interim, i.e. $n_i$ is the sample size for all arms at interim $i$.
+
+The Type-I error rate is adjusted for multiple hypotheses using a Bonferroni adjustment, as well as for repeated analyses using a ***Lan-DeMetz alpha-spending function*** with either OBF or Pocock efficacy boundaries.
+
+At stage $j$, the per-arm sample size is increased by $n_j$. If a trial arm is dropped, then the overall sample size decreased by $n_j$; recruiting will stop for any dropped experimental arms
+
+**Quantities of interest:**
+
+$PET(\delta)$**:** Probability of early termination of the trial
+
+$\mathbb{E}(N|\delta)$**:** Expected sample size
+
+# Simulation and replication function
+
+This version of the MAMS trial simulator function does not use an alpha-spending function to calculate stopping boundaries as before, but instead takes as arguments vectors for lower and upper stopping bounds (i.e. pre-specified)
+
+`l` : vector of lower stopping bounds
+
+`u` : vector of upper stopping bounds
+
+`sd` : common group standard deviation
+
+`n` : sample size added per stage for experimental arms
+
+`Mu` : matrix of group means; stack of group mean vectors for different scenarios
+
+`r` : allocation ratio, $r = \frac{n_0}{n_1}$ , $n_1 =$ `n`
+
+```{r}
+mams_ef <- function(l, u, sd = 1, n, mu, r = 1, silent = TRUE){
+  J <- length(n) # number of stages
+  K <- length(mu) - 1 # number of treatment arms i.e. number of hypothesis tests
+  
+  # indices for control and active experimental treatments
+  control_id <- 1
+  active_id <- 2:length(mu)
+  
+  # initialise list to store data vectors
+  y <- vector("list", length = length(mu))
+
+  # initiliase a running total of overall sample size
+  total_N <- 0
+  
+#--------- loop over stages 
+  for(j in 1:J){
+    if(silent == FALSE){cat("\n","Stage", j, " Number of treatments:", length(active_id),"\n")}
+    
+    y[[control_id]] <- c(y[[control_id]], rnorm(n=r*n[j], mean = mu[control_id], sd = sd))
+    
+    for (i in active_id) { # treatment arms 
+      y[[i]] <- c(y[[i]], rnorm(n = n[j], mean = mu[i], sd = sd)) 
+    }
+    
+    # compute Z statistics for each treatment with control and against efficacy boundary
+    Z <- numeric(length(active_id))
+    keep <- logical(length = length(active_id))
+    
+    # compute Z statistics for all treatments 
+    for(k in seq_along(active_id)){ 
+      i <- active_id[k]
+      
+      nT <- sum(n[1:j]) # treatment arm current stage sample size 
+      nC <- r * nT # control arm current stage sample size 
+      Z[k] <- (mean(y[[i]]) - mean(y[[control_id]])) / sqrt(sd^2 * (1/nT + 1/nC))
+    }
+    
+    # get stopping boundaries for the current stage
+    e <- u[j]
+    f <- l[j]
+    
+    # check Z statistics against stopping boundaries
+    for(k in seq_along(active_id)){ 
+      ##i <- active_id[k]
+      
+      if(Z[k] > e){ if( silent == FALSE){cat("Treatment", k, "crossed efficacy bound\n")}}
+      
+      if(Z[k] < e & Z[k] >= f){
+        keep[k] <- TRUE
+        if(silent == FALSE){cat("Treament", k, "within continuation boundaries\n")}
+      }
+      
+      if(Z[k] < f){if(silent == FALSE){cat("Treatment", k, "crossed futility bound\n")}}
+    }
+    
+    # output if an effective treatment is found
+    crossed <- which(Z > e)
+    if(length(crossed) > 0){
+      best <- crossed[which.max(Z[crossed])] 
+      
+      end_stage <- j
+      effective_trt <- seq_along(active_id)[best]
+      
+      total_N <- total_N + n[j]*K + n[j]*r
+      
+      return(list(stopped_stage = end_stage,
+                    effective_treatment = effective_trt,
+                    end_boundary = e,
+                    active_treatments = active_id-1,
+                    Z_values = round(Z,2), 
+                    total_N = total_N))
+      }
+    
+    # if no effective treatment is found: update and continue to next stage
+    total_N <- total_N + n[j]*K  + n[j]*r # sample that was just used 
+    active_id <- active_id[keep]
+    K <- length(active_id)
+    
+    # output if all treatment arms are dropped
+    if(length(active_id) == 0){
+      
+      end_stage <- j
+      
+      return(list(stopped_stage = j,
+                  effective_treatment = NA,
+                  Z_values = round(Z,2), 
+                  total_N = total_N))
+    }
+    
+    
+  } 
+#--------- end of loop over stages
+  
+  # Treatment recommendation 
+  best <- which.max(Z)
+  recommended_trt <- seq_along(active_id)[best]
+  
+  return(list(stopped_stage = J, 
+              effective_treatment = recommended_trt,
+              end_boundary = u[J],
+              active_treatments = active_id-1,
+              Z_values = round(Z,2), 
+              total_N = total_N))
+
+}
+```
+
+### Example usage
+
+```{r}
+set.seed(161)
+mu <- c(0, 0.3, 0.2, 0.2, 0.1) 
+n <- c(31,24,46)
+
+ldbounds <- ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/4, iuse = 1, sides = 1)
+u <- ldbounds$upper.bounds
+l <- rep(0, length(u))
+
+mams_ef(l = l, u = u, mu = mu, sd = 0.3, r = 1, n = n, silent = FALSE)
+```
+
+## Replication function
+
+The replication function takes the same arguments as the simulation function `mams_ef` plus an additional argument, `nrep = 1000`. The function produces `nrep` replicates of the trial specified by the other arguments and returns the following values:
+
+`early_stop_prob`: distribution of the probabilities of the trial ending early at each stage
+
+`ESS_arm`: expected sample size for a single trial arm
+
+`ESS_trial`: expected sample size for the whole trial (i.e. for all arms)
+
+```{r}
+mams_replicates <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
+  resultsmat <- matrix(data = NA, nrow = nrep, ncol = 3)
+  
+  for(i in 1:nrep){
+    rep <- mams_ef(l = l, u = u, sd = sd, n = n, mu = mu, r = r)
+    
+    resultsmat[i, ] <- c(rep$stopped_stage, rep$effective_treatment, rep$total_N)
+  }
+  colnames(resultsmat) <- c("stopped_stage", "effective_treatment", "total_N")
+  
+  resultsdf <- as.data.frame(resultsmat)
+  
+  ### Expected sample size 
+  p_earlystop <- numeric(length = length(n))
+
+  for(i in 1:length(n)){
+    # Probability of the trial stopping at stage i
+    p_earlystop[i] <- nrow(resultsdf[resultsdf$stopped_stage == i, ])/nrep
+  }
+  
+  # calculate ESS using distribution of p_earlystop
+  ESS_arm <- sum(cumsum(n)*p_earlystop) 
+  ESS_trial <- ESS_arm * length(mu)
+  
+  # calculate ESS using total_N from sim function mams_ef
+  ESS_trial2 <- round(mean(resultsdf$total_N), 1)
+  
+  if(all(mu == 0)){
+    TypeI <- mean(!is.na(resultsdf$effective_treatment))}
+  else{
+    TypeI <- NA
+  }
+  
+  return(list(early_stop_prob = p_earlystop, ESS_per_arm = ESS_arm, ESS_trial = ESS_trial, ESS_trial2 = ESS_trial2, TypeIrate = TypeI, results = resultsdf
+              ))
+}
+```
+
+### Example usage
+
+```{r}
+set.seed(161)
+mams_replicates(l = l, u = u, mu = mu, sd = 0.3, r = 1, n = n)
+```
+
+## Power function
+
+Power calculator function that takes as its arguments:
+
+• `result` - the result data frame returned after running mams_replicates
+
+• `mu` - the true treatment effect vector passed to mams_replicates
+
+• `delta_1` - the minimum threshold for the clinically relevant treatment difference
+
+```{r}
+power <- function(result, mu, delta_1, type = "any"){
+  #any-pair power: probability of any effective treatment being recommended
+  
+  # indices of treatments with a relevant treatment effect
+  if(type == "any"){
+    correct <- which(mu >= delta_1)-1
+  }
+  if(type == "LFC"){
+    correct <- which.max(mu) - 1 #### revise this ?
+    
+    #max_mu <- max(mu)
+    #correct <- which(mu == max_mu) - 1 # this isnt really the LFC
+  }
+  power_est <- mean(!is.na(result$effective_treatment) & 
+         result$effective_treatment %in% correct)
+  
+  return(power_est)
+}
+```
+
+## Scenario function
+
+`mams_hyp` produces the same return objects for different scenarios of the null hypothesis. The function takes the same arguments as `mams_replicates`, but instead of the mean vector `mu`, a matrix `Mu` whose columns consist of mean vectors for different null hypothesis scenarios must be passed.
+
+```{r}
+mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, nrep = 1000){
+  
+  ESS <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
+  PES <- list()
+  interval <- list()
+  TypeI <- NA
+  anypair_power <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
+  lfc_power <- matrix(NA, nrow = 1, ncol = ncol(Mu), dimnames = dimnames(Mu))
+  
+  # compute stopping boundries if none have been inputted by user
+  if(missing(l) && missing(u)){
+    alpha_bonf <- 0.05 / nrow(Mu)
+    if(bounds == 'obf_one'){ #one-sided 
+    u <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 1)$upper.bounds
+    l <- rep(0, length(u))
+    l[length(l)] <- u[length(u)] # make the last boundary the same for both l and u
+    }
+    if(bounds == 'obf'){
+    u <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 2, iuse = 1)$upper.bounds
+    l <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 2, iuse = 1)$lower.bounds
+    l[length(l)] <- u[length(u)]
+    }
+    if(bounds == 'pocock'){
+    u <- ldBounds(t = cumsum(n)/sum(n), alpha = alpha_bonf, sides = 1, iuse = 2)$upper.bounds
+    l <- rep(0, length(u))
+    l[length(l)] <- u[length(u)]
+    }
+  }
+
+  
+  
+  for(h in 1:ncol(Mu)){
+    mu <- Mu[,h]
+    
+    reps <- mams_replicates(l = l, u = u, n = n, r = r, sd = sd, mu = mu, nrep = nrep)
+    
+    #
+    PES[[h]] <- reps$early_stop_prob
+    
+    #ESS
+    ESS[h] <- reps$ESS_trial2
+    
+    #Type I
+    if(all(mu == 0)){
+      TypeI <- reps$TypeIrate
+    }
+    
+    #Power
+    if(missing(delta_1)){
+      anypair_power[h] <- NA
+      lfc_power[h] <- NA
+    }
+    else{
+      anypair_power[h] <- power(reps$results, mu = mu, delta_1 = delta_1, type = 'any')
+      lfc_power[h] <- power(reps$results, mu = mu, delta_1 = delta_1, type = 'LFC')
+    }
+    
+  }
+  
+  #maxN <- n[1]*length(n)*nrow(Mu)
+  maxN <- sum(n)*((nrow(Mu)-1) + r) # sum(n)*nrow(Mu)
+  ESS <- cbind(maxN, ESS)
+  dimnames(ESS)[[2]][1] <- 'MaxN'
+  
+  return(list(ESS = ESS,
+              P_early_stop = PES,
+              TypeI = TypeI, 
+              anypair_power = anypair_power,
+              LFC_power = lfc_power
+              , bounds = list(l, u)))
+}
+```
+
+## Boundary plotter function
+
+```{r}
+boundary_plotter <- function(l, u, ymax = NULL, ymin = NULL, main = NULL){
+  x = seq(1, length(u))
+  
+  if(missing(ymax)){
+    ymax = ceiling(max(u))
+    ymin = floor(min(l))
+  }
+  
+  if(missing(ymin)){
+    ymin = floor(min(l))
+  }
+  
+  if(missing(main)){
+    main = "Stopping bounds"
+  }
+  
+  plot(x = x, y = u, type = 'b', ylim = c(ymin, ymax), xaxt = 'n',
+       xlab = "Interim analysis", ylab = "Z-statistic", main = main)
+  axis(side = 1, at = x)
+  lines(x = x, y = l, type = 'b')
+  
+  x_eff <- c(x, rev(x))
+  y_eff <- c(u, rep(ymax, length(x)))
+  
+  x_fut <- x_eff
+  y_fut <- c(rep(ymin, length(x)), rev(l))
+  
+  polygon(x_eff, y_eff, col = "#6BD7AF80", border = NA, density = 10, angle = 45)
+  polygon(x_fut, y_fut, col = "salmon", border = NA, density = 10, angle = 45)
+}
+```
+
+### Example usage
+
+```{r}
+boundary_plotter(u = c(4.375, 3.094, 2.526, 2.188), l = c(0, 0, 0, 2.1875))
+```
+
+# Reproducing results from Wason & Jaki (2011) - TAILoR trial
+
+Using the simulation and replication functions above, ESS are estimated for the following scenarios:
+
+$H_G$ : The global null hypothesis: all treatment effects are zero ($\delta^{(1)} = ... = \delta^{(K)} =0$
+
+$LFC$ : The Least Favourable Configuration: $\delta^{(1)} = \delta_1, ~~ \delta^{(2)}... = \delta^{(K)} = \delta_0$, where $\delta_1$ is the clinically relevant difference that is intended to be detected in the trial and $\delta_0$ is the minimum clinically interesting difference .
+
+`MaxN` gives the maximum sample size assuming that none of the trial arms are dropped, and the trial continues until the planned final stage.
+
+```{r}
+LFC <- c(0, 0.545,0.178,0.178, 0.178)
+HG <- c(rep(0,5))
+Mu <- cbind(HG, LFC)
+
+twostage <- mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), Mu = Mu)
+
+threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), Mu = Mu)
+
+fourstage <- mams_hyp(l = c(0, 0, 0, 2.1875), u = c(4.375, 3.094, 2.526, 2.188), n = rep(24,4), Mu = Mu)
+
+results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
+rownames(results) <- c("2stage", "3stage", "4stage")
+
+type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+
+results
+
+wj_l <- fourstage$bounds[[1]]
+wj_u <- fourstage$bounds[[2]]
+```
+
+Run the same design characteristics through but with OBF-style Lan-DeMetz bounds produced by my function:
+
+```{r}
+LFC <- c(0, 0.545,0.178,0.178, 0.178)
+HG <- c(rep(0,5))
+Mu <- cbind(HG, LFC)
+
+twostage <- mams_hyp(bounds = 'obf_one', n = rep(42,2), Mu = Mu)
+
+threestage <- mams_hyp(bounds = 'obf_one', n = rep(30,3), Mu = Mu)
+
+fourstage <- mams_hyp(bounds = 'obf_one', n = rep(24,4), Mu = Mu)
+
+results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
+rownames(results) <- c("2stage", "3stage", "4stage")
+
+type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+
+results
+
+my_l <- fourstage$bounds[[1]]
+my_u <- fourstage$bounds[[2]]
+```
+
+```{r}
+boundary_plotter(l = wj_l, u = wj_u, ymax = ceiling(my_u[1]), main = "Stopping bounds for W&J OBF boundaries")
+boundary_plotter(l = my_l, u = my_u, main = "Stopping bounds for OBF-style Lan-DeMetz boundaries")
+```
+
+```{r}
+plot(1:3, type1rates, type = 'h', lwd = 5, main = 'Type I error rate for different numbers of stages (OBF Boundaries)',
+     xaxt = 'n', xlab = "Number of stages", ylab = "Type I Error rate", 
+     col = colours)
+axis(side = 1, at = 1:3, labels = c("Two", "Three", "Four"))
+abline(h = 0.05, lty = 2)
+```
+
+# Application to ROSSINI-2 trial
+
+• 3 stages (excluding internal pilot) - 2 interim + 1 final analysis
+
+• SSI of the control group is assumed to be 15%
+
+Actual trial places restrictions on how many arms can progress after each interim (pre-specified MAMS design) - for the purposes of this project this restriction will be lifted and the trial will be considered a full MAMS design
+
+### Find $\delta_0$ for ROSSINI-2
+
+```{r}
+n <- c(201, 226, 517)
+b <- ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/7 , sides = 1, iuse = 2) #Pocock
+boundary_plotter(l = c(0, 0, b$upper.bounds[3]), u= b$upper.bounds)
+```
+
+```{r}
+n <- c(201, 226, 517)
+b <- ldBounds(t = cumsum(n)/sum(n), alpha = 0.05/7 , sides = 1, iuse = 1) #OBF
+boundary_plotter(l = c(0, 0, b$upper.bounds[3]), u= b$upper.bounds)
+```
+
+```{r}
+set.seed(138)
+effects <- seq(0, 0.05, 0.005)
+n <- c(201, 226, 517)
+power_est <- numeric(length = length(effects))
+
+l <- c(0, 0, 5.7131) ; u <- c(2.4511, 3.8330, 5.7131)
+
+#l = c(0, 0, b$upper.bounds[3]); u= b$upper.bounds #one-sided Pocock
+
+for(i in 1:length(effects)){
+  mu = c(0, effects[i], rep(0,6)) # treatment 1 has effect delta_0, others have 0 effect
+  
+  res <- mams_replicates2(l = l, u = u, mu = mu, sd = 0.3, n = n, nrep = 1000)
+  
+  power_est[i] <- mean(res$results$effective_treatment == 1, na.rm = TRUE)
+}
+
+plot(effects, power_est, type = 'l', main =  expression(Power~ against~ delta[0]~ candidates),  xlab = expression(delta[0] ~ candidates), ylab = "Power")
+abline(h = 0.5, lty = 2, col = 'gray')
+abline(v = 0.02, lty = 2, col = 'gray')
+```
+
+```{r}
+n = c(201, 226, 517)
+r <- 2
+mu = matrix(data = c(0, 0.05, rep(0.02,6)), ncol = 1)
+
+mams_hyp(l = l, u = u, Mu = mu, n = n, sd = 0.33, r = r, delta_1 = 0.05)
+```
+
+```{r}
+LFC <- c(0, 0.05, rep(0.02, 6))
+HG <- c(rep(0,8))
+multiple <- c(0, 0.05, 0.04, 0.04, 0, 0, 0, 0)
+Mu <- cbind(HG, LFC, multiple)
+
+pocock <- mams_hyp(bounds = 'pocock', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
+
+obf_1 <- mams_hyp(bounds = 'obf_one', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
+
+obf_2 <- mams_hyp(bounds = 'obf', r = 2, sd = 0.33, n = n, delta_1 = 0.05, Mu = Mu)
+```
+
+```{r}
+ESS <- rbind(pocock$ESS, obf_1$ESS, obf_2$ESS)
+rownames(ESS) <- c("pocock", "one-sided", "two-sided")
+ESS
+
+TypeI <- rbind(pocock$TypeI, obf_1$TypeI, obf_2$TypeI)
+colnames(TypeI) <- c("TypeIrate") ; rownames(TypeI) <-  c("pocock", "one-sided", "two-sided")
+TypeI
+
+#Power <- 
+```
+
+```{r}
+boundary_plotter(pocock$bounds[[1]], pocock$bounds[[2]])
+
+boundary_plotter(obf_1$bounds[[1]], obf_1$bounds[[2]])
+
+boundary_plotter(obf_2$bounds[[1]], obf_2$bounds[[2]])
+```
+
+```{r}
+PES_p <- list(
+  HG       = pocock$P_early_stop[[1]],
+  LFC      = pocock$P_early_stop[[2]],
+  Multiple = pocock$P_early_stop[[3]]
+)
+PES_p <- do.call(cbind, PES_p)
+rownames(PES_p) <- paste0("Stage", 1:3)
+
+PES_1 <- list(
+  HG       = obf_1$P_early_stop[[1]],
+  LFC      = obf_1$P_early_stop[[2]],
+  Multiple = obf_1$P_early_stop[[3]]
+)
+PES_1 <- do.call(cbind, PES_1)
+rownames(PES_1) <- paste0("Stage", 1:3)
+
+PES_2 <- list(
+  HG       = obf_2$P_early_stop[[1]],
+  LFC      = obf_2$P_early_stop[[2]],
+  Multiple = obf_2$P_early_stop[[3]]
+)
+PES_2 <- do.call(cbind, PES_2)
+rownames(PES_2) <- paste0("Stage", 1:3)
+
+barplot(PES_p,
+        beside = TRUE,
+        legend = rownames(PES_p),
+        main = "Stopping probability by scenario",
+        ylab = "Probability")
+barplot(PES_1,
+        beside = TRUE,
+        #main = "",
+        ylab = "Probability")
+barplot(PES_2,
+        beside = TRUE,
+        #main = "",
+        ylab = "Probability")
+
+
+```
