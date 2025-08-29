@@ -174,8 +174,6 @@ The replication function takes the same arguments as the simulation function `ma
 
 `early_stop_prob`: distribution of the probabilities of the trial ending early at each stage
 
-`ESS_arm`: expected sample size for a single trial arm
-
 `ESS_trial`: expected sample size for the whole trial (i.e. for all arms)
 
 ```{r}
@@ -199,12 +197,8 @@ mams_replicates <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
     p_earlystop[i] <- nrow(resultsdf[resultsdf$stopped_stage == i, ])/nrep
   }
   
-  # calculate ESS using distribution of p_earlystop
-  ESS_arm <- sum(cumsum(n)*p_earlystop) 
-  ESS_trial <- ESS_arm * length(mu)
-  
   # calculate ESS using total_N from sim function mams_ef
-  ESS_trial2 <- round(mean(resultsdf$total_N), 1)
+  ESS_trial <- round(mean(resultsdf$total_N), 1)
   
   if(all(mu == 0)){
     TypeI <- mean(!is.na(resultsdf$effective_treatment))}
@@ -212,7 +206,7 @@ mams_replicates <- function(l, u, mu, sd = 1, r = 1, n, nrep = 1000){
     TypeI <- NA
   }
   
-  return(list(early_stop_prob = p_earlystop, ESS_per_arm = ESS_arm, ESS_trial = ESS_trial, ESS_trial2 = ESS_trial2, TypeIrate = TypeI, results = resultsdf
+  return(list(early_stop_prob = p_earlystop, ESS_trial = ESS_trial, TypeIrate = TypeI, results = resultsdf
               ))
 }
 ```
@@ -301,7 +295,7 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, de
     PES[[h]] <- reps$early_stop_prob
     
     #ESS
-    ESS[h] <- reps$ESS_trial2
+    ESS[h] <- reps$ESS_trial
     
     #Type I
     if(all(mu == 0)){
@@ -337,7 +331,7 @@ mams_hyp <- function(bounds = 'obf_one', l, u, n, r = 1, sd = 1, Mu, delta_1, de
 ## Boundary plotter function
 
 ```{r}
-boundary_plotter <- function(l, u, ymax = NULL, ymin = NULL, main = NULL){
+boundary_plotter <- function(l, u, ymax = NULL, ymin = NULL, xlab = "Interim analysis", ylab = "Z-statistic", main = NULL){
   x = seq(1, length(u))
   
   if(missing(ymax)){
@@ -354,7 +348,7 @@ boundary_plotter <- function(l, u, ymax = NULL, ymin = NULL, main = NULL){
   }
   
   plot(x = x, y = u, type = 'b', ylim = c(ymin, ymax), xaxt = 'n',
-       xlab = "Interim analysis", ylab = "Z-statistic", main = main)
+       xlab = xlab, ylab = ylab, main = main)
   axis(side = 1, at = x)
   lines(x = x, y = l, type = 'b')
   
@@ -372,7 +366,7 @@ boundary_plotter <- function(l, u, ymax = NULL, ymin = NULL, main = NULL){
 ### Example usage
 
 ```{r}
-boundary_plotter(u = c(4.375, 3.094, 2.526, 2.188), l = c(0, 0, 0, 2.1875))
+boundary_plotter(u = c(4.375, 3.094, 2.526, 2.188), l = c(0, 0, 0, 2.1875), xlab = "")
 ```
 
 # Reproducing results from Wason & Jaki (2011) - TAILoR trial
@@ -395,6 +389,31 @@ twostage <- mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), Mu = M
 threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), Mu = Mu)
 
 fourstage <- mams_hyp(l = c(0, 0, 0, 2.1875), u = c(4.375, 3.094, 2.526, 2.188), n = rep(24,4), Mu = Mu)
+
+results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
+rownames(results) <- c("2stage", "3stage", "4stage")
+
+type1rates <- c(twostage$TypeI, threestage$TypeI, fourstage$TypeI)
+
+results
+
+wj_l <- fourstage$bounds[[1]]
+wj_u <- fourstage$bounds[[2]]
+```
+
+```{r}
+cat("Seconds to generate results:\n")
+system.time({
+  LFC <- c(0, 0.545, 0.178, 0.178, 0.178)
+  HG <- c(rep(0,5))
+  Mu <- cbind(HG, LFC)
+
+  twostage <- mams_hyp(l = c(0, 2.169), u = c(3.068, 2.169), n = rep(42,2), Mu = Mu)
+
+  threestage <- mams_hyp(l = c(0, 0, 2.182), u = c(3.779, 2.672, 2.182), n = rep(30,3), Mu = Mu)
+
+  fourstage <- mams_hyp(l = c(0, 0, 0, 2.1875), u = c(4.375, 3.094, 2.526, 2.188), n = rep(24,4), Mu = Mu)
+})["elapsed"]
 
 results <- rbind(twostage$ESS, threestage$ESS, fourstage$ESS)
 rownames(results) <- c("2stage", "3stage", "4stage")
@@ -541,11 +560,11 @@ Power_LFC[,2]
 ```
 
 ```{r}
-boundary_plotter(pocock$bounds[[1]], pocock$bounds[[2]])
+boundary_plotter(pocock$bounds[[1]], pocock$bounds[[2]], ymax = 6, ymin = -6, main = "")
 
-boundary_plotter(obf_1$bounds[[1]], obf_1$bounds[[2]])
+boundary_plotter(obf_1$bounds[[1]], obf_1$bounds[[2]], ymax = 6, ymin = -6, main = "")
 
-boundary_plotter(obf_2$bounds[[1]], obf_2$bounds[[2]])
+boundary_plotter(obf_2$bounds[[1]], obf_2$bounds[[2]], main = "")
 ```
 
 ```{r}
@@ -637,11 +656,11 @@ Power_LFC[,2]
 
 ```{r}
 cat("r = 1:sqrt(7) \n")
-pocock <- mams_hyp(bounds = 'pocock', r = 1/sqrt(7), sd = 0.33, n = n, delta_1 = 0.05, delta_0 = 0.02, Mu = Mu)
+pocock <- mams_hyp(bounds = 'pocock', r = sqrt(7), sd = 0.33, n = n, delta_1 = 0.05, delta_0 = 0.02, Mu = Mu)
 
-obf_1 <- mams_hyp(bounds = 'obf_one', r = 1/sqrt(7), sd = 0.33, n = n, delta_1 = 0.05, delta_0 = 0.02, Mu = Mu)
+obf_1 <- mams_hyp(bounds = 'obf_one', r = sqrt(7), sd = 0.33, n = n, delta_1 = 0.05, delta_0 = 0.02, Mu = Mu)
 
-obf_2 <- mams_hyp(bounds = 'obf', r = 1/sqrt(7), sd = 0.33, n = n, delta_1 = 0.05, delta_0 = 0.02, Mu = Mu)
+obf_2 <- mams_hyp(bounds = 'obf', r = sqrt(7), sd = 0.33, n = n, delta_1 = 0.05, delta_0 = 0.02, Mu = Mu)
 
 ESS <- rbind(pocock$ESS, obf_1$ESS, obf_2$ESS)
 rownames(ESS) <- c("pocock", "one-sided", "two-sided")
